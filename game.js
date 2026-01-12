@@ -32,10 +32,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (map === 4) randomizeMap4Button();
   }
 
+  // Randomize button4 position on platforms/obstacles
   function randomizeMap4Button() {
-    const x = (Math.random() - 0.5) * 8;
-    const z = -4 - Math.random() * 4;
-    button4.setAttribute('position', `${x} 0.4 ${z}`);
+    const positions = [
+      "-2 0.8 -2",
+      "3 1.3 -5",
+      "-3 1.5 -6",
+      "0 2 -4",
+      "2 1.5 -3"
+    ];
+    const randomPos = positions[Math.floor(Math.random() * positions.length)];
+    button4.setAttribute('position', randomPos);
   }
 
   button1.addEventListener('click', () => {
@@ -58,5 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => switchToMap(1), 1500);
   });
 
+  // Start game at Map 1
   switchToMap(1);
 });
