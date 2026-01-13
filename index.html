@@ -1,71 +1,113 @@
-<a-scene fog="type: exponential; color: #222; density: 0.03">
-
-  <!-- Sky with gradient for Map 1 -->
-  <a-sky id="sky" color="#87CEEB"></a-sky>
-
-  <!-- Directional light for overall brightness -->
-  <a-entity light="type: directional; color: #FFF; intensity: 1.2" position="5 10 5" rotation="-45 -45 0"></a-entity>
-
-  <!-- Ambient light for soft illumination -->
-  <a-entity light="type: ambient; color: #666"></a-entity>
-
-  <!-- Camera + cursor -->
-  <a-entity id="rig" position="0 1.6 0">
-    <a-entity camera look-controls wasd-controls position="0 0 0">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Find the Button VR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- A-Frame (WebVR/WebXR framework) -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="game.js" defer></script>
+</head>
+<body>
+  <!-- A-Frame scene -->
+  <a-scene>
+    <!-- Camera + cursor (for clicking with gaze or controller) -->
+    <a-entity id="rig" position="0 1.6 0">
       <a-entity
-        cursor="fuse: false; rayOrigin: mouse"
-        raycaster="objects: .clickable"
-        position="0 0 -1"
-        geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
-        material="color: white; shader: flat">
+        camera
+        look-controls
+        wasd-controls
+        position="0 0 0"
+      >
+        <a-entity
+          cursor="fuse: false; rayOrigin: mouse"
+          raycaster="objects: .clickable"
+          position="0 0 -1"
+          geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
+          material="color: white; shader: flat"
+        ></a-entity>
       </a-entity>
     </a-entity>
-  </a-entity>
 
-  <!-- Map 1 -->
-  <a-entity id="map1">
-    <a-plane rotation="-90 0 0" width="20" height="20" src="#grassTexture" repeat="10 10" material="shader: standard; roughness:0.7; metalness:0.2"></a-plane>
-    <a-box position="0 1 -3" depth="1" height="2" width="4" color="#555"></a-box>
-    <a-box id="button1" class="clickable" position="1 1 -2.5" depth="0.2" height="0.2" width="0.2" color="#FF5722"></a-box>
-  </a-entity>
+    <!-- Map 1 -->
+    <a-entity id="map1">
+      <a-plane rotation="-90 0 0" width="20" height="20" color="#4CAF50"></a-plane>
+      <a-box position="0 1 -3" depth="1" height="2" width="4" color="#555"></a-box>
 
-  <!-- Map 2 -->
-  <a-entity id="map2" visible="false">
-    <a-plane rotation="-90 0 0" width="20" height="20" src="#stoneTexture" repeat="10 10" material="shader: standard; roughness:0.7; metalness:0.2"></a-plane>
-    <a-box position="-2 1 -4" depth="2" height="2" width="2" color="#3F51B5"></a-box>
-    <a-box position="2 1 -6" depth="2" height="2" width="2" color="#9C27B0"></a-box>
-    <a-sphere id="button2" class="clickable" position="-1 1 -3.5" radius="0.15" color="#FFC107"></a-sphere>
-  </a-entity>
+      <!-- Hidden button on Map 1 -->
+      <a-box id="button1"
+             class="clickable"
+             position="1 1 -2.5"
+             depth="0.2" height="0.2" width="0.2"
+             color="#FF5722">
+      </a-box>
+    </a-entity>
 
-  <!-- Map 3 -->
-  <a-entity id="map3" visible="false">
-    <a-plane rotation="-90 0 0" width="20" height="20" src="#sandTexture" repeat="10 10" material="shader: standard; roughness:0.7; metalness:0.2"></a-plane>
-    <a-cylinder position="0 1 -5" radius="2" height="0.5" color="#3F51B5"></a-cylinder>
-    <a-sphere id="button3" class="clickable" position="0 1 -3" radius="0.15" color="#8BC34A"></a-sphere>
-  </a-entity>
+    <!-- Map 2 -->
+    <a-entity id="map2" visible="false">
+      <a-plane rotation="-90 0 0" width="20" height="20" color="#607D8B"></a-plane>
+      <a-box position="-2 1 -4" depth="2" height="2" width="2" color="#3F51B5"></a-box>
+      <a-box position="2 1 -6" depth="2" height="2" width="2" color="#9C27B0"></a-box>
 
-  <!-- Map 4 -->
-  <a-entity id="map4" visible="false">
-    <a-plane rotation="-90 0 0" width="20" height="20" src="#metalTexture" repeat="10 10" material="shader: standard; roughness:0.7; metalness:0.5"></a-plane>
-    <a-box position="-2 0.5 -2" width="3" height="0.5" depth="3" color="#673AB7"></a-box>
-    <a-box position="3 1 -5" width="2" height="0.5" depth="2" color="#3F51B5"></a-box>
-    <a-box position="-3 1.2 -6" width="2" height="0.5" depth="2" color="#E91E63"></a-box>
-    <a-cylinder position="0 1 -4" radius="0.3" height="2" color="#FF5722"></a-cylinder>
-    <a-sphere position="2 1 -3" radius="0.5" color="#FFC107"></a-sphere>
-    <a-cylinder position="-1 1 -5" radius="0.4" height="1.5" color="#4CAF50"></a-cylinder>
-    <a-box id="button4" class="clickable" depth="0.2" height="0.2" width="0.2" color="#FFEB3B"></a-box>
-  </a-entity>
+      <!-- Hidden button on Map 2 -->
+      <a-sphere id="button2"
+                class="clickable"
+                position="-1 1 -3.5"
+                radius="0.15"
+                color="#FFC107">
+      </a-sphere>
+    </a-entity>
 
-  <!-- UI Text -->
-  <a-entity id="uiText" text="value: Find the button!; align: center" position="0 2.2 -2"></a-entity>
-  <a-entity id="mapLabel" text="value: Map 1; align: center" position="0 2 -2"></a-entity>
+    <!-- Map 3 -->
+    <a-entity id="map3" visible="false">
+      <a-plane rotation="-90 0 0" width="20" height="20" color="#FF9800"></a-plane>
+      <a-cylinder position="0 1 -5" radius="2" height="0.5" color="#3F51B5"></a-cylinder>
+      
+      <!-- Hidden button on Map 3 -->
+      <a-sphere id="button3"
+                class="clickable"
+                position="0 1 -3"
+                radius="0.15"
+                color="#8BC34A">
+      </a-sphere>
+    </a-entity>
 
-  <!-- Skybox textures -->
-  <a-assets>
-    <img id="grassTexture" src="https://cdn.aframe.io/a-painter/images/floor.jpg">
-    <img id="stoneTexture" src="https://cdn.aframe.io/a-painter/images/tiles.jpg">
-    <img id="sandTexture" src="https://cdn.aframe.io/a-painter/images/sand.jpg">
-    <img id="metalTexture" src="https://cdn.aframe.io/a-painter/images/metal.jpg">
-  </a-assets>
+    <!-- Map 4 (Harder to find button) -->
+    <a-entity id="map4" visible="false">
+      <a-plane rotation="-90 0 0" width="20" height="20" color="#9C27B0"></a-plane>
+      
+      <!-- More complex environment: obstacles and decorations -->
+      <a-box position="3 1 -5" width="1" height="3" depth="1" color="#9E9E9E"></a-box>
+      <a-sphere position="-3 1 -4" radius="0.5" color="#FFC107"></a-sphere>
+      <a-cylinder position="0 1 -8" radius="1" height="3" color="#FF5722"></a-cylinder>
 
-</a-scene>
+      <!-- Hidden button on Map 4, harder to find (randomized within an area) -->
+      <a-box id="button4"
+             class="clickable"
+             position="random"
+             depth="0.2" height="0.2" width="0.2"
+             color="#3F51B5">
+      </a-box>
+    </a-entity>
+
+    <!-- UI: text feedback + map label -->
+    <a-entity
+      id="uiText"
+      text="value: Find the button!; align: center"
+      position="0 2.2 -2">
+    </a-entity>
+
+    <a-entity
+      id="mapLabel"
+      text="value: Map 1; align: center"
+      position="0 2 -2">
+    </a-entity>
+
+    <!-- Sky -->
+    <a-sky color="#222"></a-sky>
+
+    <!-- WebXR / VR support -->
+    <a-entity webxr="optionalFeatures: tracking-unbounded"></a-entity>
+  </a-scene>
+</body>
+</html>
