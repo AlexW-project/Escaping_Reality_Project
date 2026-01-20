@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const map3 = document.getElementById('map3');
   const map4 = document.getElementById('map4');
 
+  barn = new Barn(0, 0, -6);
+
   const button1 = document.getElementById('button1');
   const button2 = document.getElementById('button2');
   const button3 = document.getElementById('button3');
