@@ -4,218 +4,107 @@
   <meta charset="UTF-8" />
   <title>Find the Button VR</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- A-Frame (WebVR/WebXR framework) -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="game.js" defer></script>
-  <script src="farm.js" defer></script>
 </head>
 <body>
-  <!-- A-Frame scene -->
-  <a-scene>
-    <!-- Camera + cursor (for clicking with gaze or controller) -->
-    <a-entity id="rig" position="0 1.6 0">
+<a-scene>
+
+  <!-- Camera + cursor -->
+  <a-entity id="rig" position="0 1.6 0">
+    <a-entity camera look-controls wasd-controls>
       <a-entity
-        camera
-        look-controls
-        wasd-controls
-        position="0 0 0"
-      >
-        <a-entity
-          cursor="fuse: false; rayOrigin: mouse"
-          raycaster="objects: .clickable"
-          position="0 0 -1"
-          geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
-          material="color: white; shader: flat"
-        ></a-entity>
+        cursor="rayOrigin: mouse"
+        raycaster="objects: .clickable"
+        position="0 0 -1"
+        geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
+        material="color: white; shader: flat">
       </a-entity>
     </a-entity>
-
-    <!-- Sky -->
-<a-sky color="#82C8E5"></a-sky>
-
-<!-- Sunlight -->
-<a-light type="directional" intensity="1" position="5 10 5"></a-light>
-<a-light type="ambient" intensity="0.4"></a-light>
-
-<!-- FARM MAP -->
-<a-entity id="map1">
-
-  <!-- Grass ground -->
-  <a-plane
-    rotation="-90 0 0"
-    width="30"
-    height="30"
-    color="#5DBB63">
-  </a-plane>
-
-  <!-- Barn -->
-  <a-box position="0 1.5 -6" width="4" height="4" depth="5" color="#B71C1C"></a-box>
-  <
-
-  <!-- Barn roof -->
-  <a-cone
-    position="0 6 -6"
-    radius-bottom="3.2"
-    radius-top="0"
-    height="2"
-    color="#6D4C41">
-  </a-cone>
-
-  <!-- Fence -->
-  <a-box position="-6 0.5 -4" width="0.2" height="1" depth="8" color="#8D6E63"></a-box>
-  <a-box position="6 0.5 -4"  width="0.2" height="1" depth="8" color="#8D6E63"></a-box>
-  <a-box position="0 0.5 -8"  width="12" height="1" depth="0.2" color="#8D6E63"></a-box>
-
-  <!-- Crop rows -->
-  <a-box position="-3 0.1 2" width="1" height="0.2" depth="4" color="#4E7C33"></a-box>
-  <a-box position="-1 0.1 2" width="1" height="0.2" depth="4" color="#4E7C33"></a-box>
-  <a-box position="1 0.1 2"  width="1" height="0.2" depth="4" color="#4E7C33"></a-box>
-  <a-box position="3 0.1 2"  width="1" height="0.2" depth="4" color="#4E7C33"></a-box>
-
-  <!-- Tree 1 -->
-  <a-cylinder position="-7 1 -2" radius="0.3" height="2" color="#6D4C41"></a-cylinder>
-  <a-sphere position="-7 2.5 -2" radius="1.2" color="#2E7D32"></a-sphere>
-
-  <!-- Tree 2 -->
-  <a-cylinder position="7 1 -1" radius="0.3" height="2" color="#6D4C41"></a-cylinder>
-  <a-sphere position="7 2.5 -1" radius="1.2" color="#2E7D32"></a-sphere>
-
-  <!-- Hidden button (now looks like a crate) -->
-  <a-box id="button1"
-         class="clickable"
-         position="1 0.3 -3"
-         width="0.5"
-         height="0.5"
-         depth="0.5"
-         color="#FF8F00">
-  </a-box>
-
-<a-entity id="map2" visible="false">
-
-  <!-- Ground -->
-  <a-plane rotation="-90 0 0" width="40" height="40" color="#8BC34A"></a-plane>
-
-  <!-- Road -->
-  <a-plane rotation="-90 0 0" position="0 0.01 0" width="6" height="40" color="#424242"></a-plane>
-
-  <!-- Sidewalks -->
-  <a-plane rotation="-90 0 0" position="-4 0.02 0" width="2" height="40" color="#BDBDBD"></a-plane>
-  <a-plane rotation="-90 0 0" position="4 0.02 0" width="2" height="40" color="#BDBDBD"></a-plane>
-
-  <!-- ===== HOUSE 1 (REAL BUTTON) ===== -->
-  <a-entity position="-6 0 -6">
-
-    <a-box position="0 1.5 0" width="4" height="3" depth="4" color="#FFCC80"></a-box>
-    <a-cone position="0 3.5 0" radius-bottom="3" height="2" color="#6D4C41"></a-cone>
-
-    <!-- Door -->
-    <a-box position="0 1 2.01" width="1" height="2" depth="0.1" color="#5D4037"></a-box>
-
-    <!-- REAL Doorknob Button -->
-    <a-sphere
-      id="button2"
-      class="clickable"
-      position="0.45 1 2.15"
-      radius="0.12"
-      color="#FFC107">
-    </a-sphere>
-
-    <!-- Windows -->
-    <a-box position="-1.2 1.8 2.01" width="0.8" height="0.8" depth="0.1" color="#90CAF9"></a-box>
-    <a-box position="1.2 1.8 2.01" width="0.8" height="0.8" depth="0.1" color="#90CAF9"></a-box>
   </a-entity>
 
-  <!-- ===== HOUSE 2 (FAKE KNOB) ===== -->
-  <a-entity position="6 0 -10">
+  <!-- Lights -->
+  <a-light type="directional" intensity="1" position="5 10 5"></a-light>
+  <a-light type="ambient" intensity="0.4"></a-light>
 
-    <a-box position="0 1.5 0" width="4" height="3" depth="4" color="#B3E5FC"></a-box>
-    <a-cone position="0 3.5 0" radius-bottom="3" height="2" color="#0277BD"></a-cone>
+  <!-- ===== MAP 1 ===== -->
+  <a-entity id="map1">
 
-    <a-box position="0 1 2.01" width="1" height="2" depth="0.1" color="#4E342E"></a-box>
+    <a-plane rotation="-90 0 0" width="30" height="30" color="#5DBB63"></a-plane>
 
-    <!-- Fake knob -->
-    <a-sphere position="0.45 1 2.15" radius="0.12" color="#FFB300"></a-sphere>
+    <a-box position="0 1.5 -6" width="4" height="4" depth="5" color="#B71C1C"></a-box>
 
-    <a-box position="-1.2 1.8 2.01" width="0.8" height="0.8" depth="0.1" color="#90CAF9"></a-box>
-    <a-box position="1.2 1.8 2.01" width="0.8" height="0.8" depth="0.1" color="#90CAF9"></a-box>
+    <a-cone position="0 6 -6" radius-bottom="3.2" height="2" color="#6D4C41"></a-cone>
+
+    <a-box position="-6 0.5 -4" width="0.2" height="1" depth="8" color="#8D6E63"></a-box>
+    <a-box position="6 0.5 -4" width="0.2" height="1" depth="8" color="#8D6E63"></a-box>
+    <a-box position="0 0.5 -8" width="12" height="1" depth="0.2" color="#8D6E63"></a-box>
+
+    <a-box position="-3 0.1 2" width="1" height="0.2" depth="4" color="#4E7C33"></a-box>
+    <a-box position="-1 0.1 2" width="1" height="0.2" depth="4" color="#4E7C33"></a-box>
+    <a-box position="1 0.1 2" width="1" height="0.2" depth="4" color="#4E7C33"></a-box>
+    <a-box position="3 0.1 2" width="1" height="0.2" depth="4" color="#4E7C33"></a-box>
+
+    <a-cylinder position="-7 1 -2" radius="0.3" height="2" color="#6D4C41"></a-cylinder>
+    <a-sphere position="-7 2.5 -2" radius="1.2" color="#2E7D32"></a-sphere>
+
+    <a-cylinder position="7 1 -1" radius="0.3" height="2" color="#6D4C41"></a-cylinder>
+    <a-sphere position="7 2.5 -1" radius="1.2" color="#2E7D32"></a-sphere>
+
+    <a-box id="button1" class="clickable"
+      position="1 0.3 -3"
+      width="0.5" height="0.5" depth="0.5"
+      color="#FF8F00">
+    </a-box>
+
   </a-entity>
 
-  <!-- ===== HOUSE 3 (FAKE KNOB) ===== -->
-  <a-entity position="-6 0 -14">
+  <!-- ===== MAP 2 ===== -->
+  <a-entity id="map2" visible="false">
 
-    <a-box position="0 1.5 0" width="4" height="3" depth="4" color="#DCEDC8"></a-box>
-    <a-cone position="0 3.5 0" radius-bottom="3" height="2" color="#33691E"></a-cone>
+    <a-plane rotation="-90 0 0" width="40" height="40" color="#8BC34A"></a-plane>
 
-    <a-box position="0 1 2.01" width="1" height="2" depth="0.1" color="#3E2723"></a-box>
+    <a-plane rotation="-90 0 0" position="0 0.01 0" width="6" height="40" color="#424242"></a-plane>
 
-    <!-- Fake knob -->
-    <a-sphere position="0.45 1 2.15" radius="0.12" color="#FBC02D"></a-sphere>
+    <a-plane rotation="-90 0 0" position="-4 0.02 0" width="2" height="40" color="#BDBDBD"></a-plane>
+    <a-plane rotation="-90 0 0" position="4 0.02 0" width="2" height="40" color="#BDBDBD"></a-plane>
 
-    <a-box position="-1.2 1.8 2.01" width="0.8" height="0.8" depth="0.1" color="#90CAF9"></a-box>
-    <a-box position="1.2 1.8 2.01" width="0.8" height="0.8" depth="0.1" color="#90CAF9"></a-box>
-  </a-entity>
+    <a-entity position="-6 0 -6">
+      <a-box position="0 1.5 0" width="4" height="3" depth="4" color="#FFCC80"></a-box>
+      <a-cone position="0 3.5 0" radius-bottom="3" height="2" color="#6D4C41"></a-cone>
+      <a-box position="0 1 2.01" width="1" height="2" depth="0.1" color="#5D4037"></a-box>
 
-  <!-- Street lights -->
-  <a-cylinder position="0 1.5 -5" radius="0.1" height="3" color="#9E9E9E"></a-cylinder>
-  <a-sphere position="0 3.2 -5" radius="0.3" color="#FFF9C4"></a-sphere>
-
-  <a-cylinder position="0 1.5 -15" radius="0.1" height="3" color="#9E9E9E"></a-cylinder>
-  <a-sphere position="0 3.2 -15" radius="0.3" color="#FFF9C4"></a-sphere>
-
-</a-entity>
-
-
-    <!-- Map 3 -->
-    <a-entity id="map3" visible="false">
-      <a-plane rotation="-90 0 0" width="20" height="20" color="#FF9800"></a-plane>
-      <a-cylinder position="0 1 -5" radius="2" height="0.5" color="#3F51B5"></a-cylinder>
-      
-      <!-- Hidden button on Map 3 -->
-      <a-sphere id="button3"
-                class="clickable"
-                position="0 1 -3"
-                radius="0.15"
-                color="#8BC34A">
+      <a-sphere id="button2" class="clickable"
+        position="0.45 1 2.15"
+        radius="0.12"
+        color="#FFC107">
       </a-sphere>
     </a-entity>
 
-    <!-- Map 4 (Harder to find button) -->
-    <a-entity id="map4" visible="false">
-      <a-plane rotation="-90 0 0" width="20" height="20" color="#9C27B0"></a-plane>
-      
-      <!-- More complex environment: obstacles and decorations -->
-      <a-box position="3 1 -5" width="1" height="3" depth="1" color="#9E9E9E"></a-box>
-      <a-sphere position="-3 1 -4" radius="0.5" color="#FFC107"></a-sphere>
-      <a-cylinder position="0 1 -8" radius="1" height="3" color="#FF5722"></a-cylinder>
+  </a-entity>
 
-      <!-- Hidden button on Map 4, harder to find (randomized within an area) -->
-      <a-box id="button4"
-             class="clickable"
-             position="random"
-             depth="0.2" height="0.2" width="0.2"
-             color="#3F51B5">
-      </a-box>
-    </a-entity>
+  <!-- ===== MAP 3 ===== -->
+  <a-entity id="map3" visible="false">
+    <a-plane rotation="-90 0 0" width="20" height="20" color="#FF9800"></a-plane>
+    <a-sphere id="button3" class="clickable" position="0 1 -3" radius="0.15" color="#8BC34A"></a-sphere>
+  </a-entity>
 
-    <!-- UI: text feedback + map label -->
-    <a-entity
-      id="uiText"
-      text="value: Find the button!; align: center"
-      position="0 2.2 -2">
-    </a-entity>
+  <!-- ===== MAP 4 ===== -->
+  <a-entity id="map4" visible="false">
+    <a-plane rotation="-90 0 0" width="20" height="20" color="#9C27B0"></a-plane>
+    <a-box id="button4" class="clickable"
+      position="1 0.3 -4"
+      width="0.2" height="0.2" depth="0.2"
+      color="#3F51B5">
+    </a-box>
+  </a-entity>
 
-    <a-entity
-      id="mapLabel"
-      text="value: Map 1; align: center"
-      position="0 2 -2">
-    </a-entity>
+  <!-- UI -->
+  <a-entity id="uiText" text="value: Find the button!; align: center" position="0 2.2 -2"></a-entity>
+  <a-entity id="mapLabel" text="value: Map 1; align: center" position="0 2 -2"></a-entity>
 
-    <!-- Sky -->
-    <a-sky color="#222"></a-sky>
+  <a-sky color="#82C8E5"></a-sky>
 
-    <!-- WebXR / VR support -->
-    <a-entity webxr="optionalFeatures: tracking-unbounded"></a-entity>
-    <a-camera position="0 1.4 5" wasd-controls="acceleration: 50; fly: true" look-controls> </a-camera>
-  </a-scene>
+</a-scene>
 </body>
 </html>
