@@ -1,6 +1,8 @@
 window.addEventListener('load', () => {
   const scene = document.querySelector('a-scene');
 
+  
+
   scene.addEventListener('loaded', () => {
 
     const map1 = document.getElementById('map1');
