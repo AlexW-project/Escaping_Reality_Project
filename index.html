@@ -31,8 +31,8 @@
   <a-entity id="map1">
     <img id="grass" src="grass.jpg">
     <img id="bark" src="tree.jpg">
-    
-    <a-plane rotation="-90 0 0" width="30" height="30" color="#5DBB63"></a-plane>
+
+    <a-plane rotation="-90 0 0" width="30" height="30" color="#5DBB63" material="src: #grass; repeat: 10 10"></a-plane>
     <!-- Barn -->
     <a-entity position="0 10 0">
       <a-box position="0 1.5 -6" width="4" height="4" depth="5" color="#B71C1C"></a-box>
@@ -51,11 +51,11 @@
     <a-box position="1 0.1 2" width="1" height="0.2" depth="4" color="#4E7C33"></a-box>
     <a-box position="3 0.1 2" width="1" height="0.2" depth="4" color="#4E7C33"></a-box>
 
-    <a-cylinder position="-7 1 -2" radius="0.3" height="2" color="#6D4C41"></a-cylinder>
-    <a-sphere position="-7 2.5 -2" radius="1.2" color="#2E7D32"></a-sphere>
+    <a-cylinder position="-7 1 -2" radius="0.3" height="2" color="#6D4C41"material="src: #bark; repeat: 2 2"></a-cylinder>
+    <a-sphere position="-7 2.5 -2" radius="1.2" color="#2E7D32" material="src: #grass; repeat: 3 3"></a-sphere>
 
-    <a-cylinder position="7 1 -1" radius="0.3" height="2" color="#6D4C41"></a-cylinder>
-    <a-sphere position="7 2.5 -1" radius="1.2" color="#2E7D32"></a-sphere>
+    <a-cylinder position="7 1 -1" radius="0.3" height="2" color="#6D4C41" material="src: #bark; repeat: 2 2"></a-cylinder>
+    <a-sphere position="7 2.5 -1" radius="1.2" color="#2E7D32" material="src: #grass; repeat: 3 3"></a-sphere>
 
     <a-box id="button1" class="clickable"
       position="1 0.3 -3"
