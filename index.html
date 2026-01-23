@@ -63,60 +63,58 @@
 
 </a-entity>
 
-<!-- Realistic Pig -->
-<a-entity position="-3 0 -2" rotation="0 30 0">
-
-  <!-- Body -->
-  <a-ellipsoid
-    position="0 0.35 0"
-    radius="0.45 0.28 0.3"
-    color="#F6B6C1">
-  </a-ellipsoid>
-
-  <!-- Head -->
-  <a-ellipsoid
-    position="0.55 0.38 0"
-    radius="0.22 0.2 0.2"
-    color="#F6B6C1">
-  </a-ellipsoid>
-
-  <!-- Snout -->
-  <a-cylinder
-    position="0.75 0.35 0"
-    radius="0.09"
-    height="0.08"
-    rotation="90 0 0"
-    color="#F48FB1">
-  </a-cylinder>
-
-  <!-- Nostrils -->
-  <a-sphere position="0.8 0.35 0.04" radius="0.015" color="#000"></a-sphere>
-  <a-sphere position="0.8 0.35 -0.04" radius="0.015" color="#000"></a-sphere>
-
-  <!-- Eyes -->
-  <a-sphere position="0.6 0.45 0.1" radius="0.02" color="#000"></a-sphere>
-  <a-sphere position="0.6 0.45 -0.1" radius="0.02" color="#000"></a-sphere>
-
-  <!-- Ears -->
-  <a-cone position="0.45 0.6 0.18" radius-bottom="0.07" height="0.15" rotation="0 0 -40" color="#F6B6C1"></a-cone>
-  <a-cone position="0.45 0.6 -0.18" radius-bottom="0.07" height="0.15" rotation="0 0 40" color="#F6B6C1"></a-cone>
-
-  <!-- Legs -->
-  <a-cylinder position="0.2 0.15 0.18" radius="0.04" height="0.3" color="#D81B60"></a-cylinder>
-  <a-cylinder position="0.2 0.15 -0.18" radius="0.04" height="0.3" color="#D81B60"></a-cylinder>
-  <a-cylinder position="-0.2 0.15 0.18" radius="0.04" height="0.3" color="#D81B60"></a-cylinder>
-  <a-cylinder position="-0.2 0.15 -0.18" radius="0.04" height="0.3" color="#D81B60"></a-cylinder>
-
-  <!-- Curly tail -->
-  <a-torus
-    position="-0.55 0.4 0"
-    radius="0.06"
-    radius-tubular="0.015"
-    rotation="0 90 0"
-    color="#F48FB1">
-  </a-torus>
-
+<a-entity position="-3 0 -2">
+  <a-box position="0 0.3 0" width="0.6" height="0.4" depth="0.4" color="#F8BBD0"></a-box>
+  <a-sphere position="0.35 0.3 0" radius="0.18" color="#F8BBD0"></a-sphere>
+  <a-sphere position="0.45 0.3 0.07" radius="0.04" color="#000"></a-sphere>
+  <a-sphere position="0.45 0.3 -0.07" radius="0.04" color="#000"></a-sphere>
 </a-entity>
+
+<!-- Pig 2 (front-right) -->
+<a-entity position="3 0 -2">
+  <a-box position="0 0.3 0" width="0.6" height="0.4" depth="0.4" color="#F8BBD0"></a-box>
+  <a-sphere position="0.35 0.3 0" radius="0.18" color="#F8BBD0"></a-sphere>
+  <a-sphere position="0.45 0.3 0.07" radius="0.04" color="#000"></a-sphere>
+  <a-sphere position="0.45 0.3 -0.07" radius="0.04" color="#000"></a-sphere>
+</a-entity>
+
+<!-- Pig 3 (back-left) -->
+<a-entity position="-2 0 2">
+  <a-box position="0 0.3 0" width="0.6" height="0.4" depth="0.4" color="#F8BBD0"></a-box>
+  <a-sphere position="0.35 0.3 0" radius="0.18" color="#F8BBD0"></a-sphere>
+</a-entity>
+
+<!-- Pig 4 (back-right) -->
+<a-entity position="2 0 2">
+  <a-box position="0 0.3 0" width="0.6" height="0.4" depth="0.4" color="#F8BBD0"></a-box>
+  <a-sphere position="0.35 0.3 0" radius="0.18" color="#F8BBD0"></a-sphere>
+</a-entity>
+
+
+    <a-box position="-6 0.5 -4" width="0.2" height="1" depth="8" color="#C4A484" material="src: #fence; repeat: 4 1"></a-box>
+    <a-box position="6 0.5 -4" width="0.2" height="1" depth="8" color="#C4A484" material="src: #fence; repeat: 4 1"></a-box>
+    <a-box position="0 0.5 -8" width="12" height="1" depth="0.2" color="#C4A484" material="src: #fence; repeat: 4 1"></a-box>
+
+    <a-plane rotation="-90 0 0" position="0 0.01 2" width="8" height="4.5" color="#8B4513" material="src: #grass; repeat: 5 2"></a-plane>
+    <a-box position="-3 0.1 2" width="1" height="0.2" depth="4" color="#D4A017"></a-box>
+    <a-cone position="3 0.1 1" radius-bottom="0.2" height="4" color="#D4A017"></a-cone>
+    <a-box position="-1 0.1 2" width="1" height="0.2" depth="4" color="#D4A017"></a-box>
+    <a-box position="1 0.1 2" width="1" height="0.2" depth="4" color="#D4A017"></a-box>
+    <a-box position="3 0.1 2" width="1" height="0.2" depth="4" color="#D4A017"></a-box>
+
+    <a-cylinder position="-7 1 -2" radius="0.3" height="2" color="#6D4C41"material="src: #bark; repeat: 2 2"></a-cylinder>
+    <a-sphere position="-7 2.5 -2" radius="1.2" color="#2E7D32" material="src: #grass; repeat: 3 3"></a-sphere>
+
+    <a-cylinder position="7 1 -1" radius="0.3" height="2" color="#6D4C41" material="src: #bark; repeat: 2 2"></a-cylinder>
+    <a-sphere position="7 2.5 -1" radius="1.2" color="#2E7D32" material="src: #grass; repeat: 3 3"></a-sphere>
+
+    <a-box id="button1" class="clickable"
+      position="1 0.3 -3"
+      width="0.5" height="0.5" depth="0.5"
+      color="#FF8F00">
+    </a-box>
+
+  </a-entity>
 
   <!-- ===== MAP 2 ===== -->
   <a-entity id="map2" visible="false">
