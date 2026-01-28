@@ -144,14 +144,14 @@ function createPigButton(x, z, isCorrect) {
 
 // -------------------- ROOMS --------------------
 function roomOne() {
-  // Sky
-  scene.background = new THREE.Color(0x87ceeb);
+  // -------------------- SKY AND LIGHT --------------------
+  scene.background = new THREE.Color(0x87ceeb); // light blue sky
   ambient.color.set(0xffffff);
   ambient.intensity = 0.5;
   sun.intensity = 1;
   sun.position.set(10, 20, 10);
 
-  // Grass
+  // -------------------- GRASS FLOOR --------------------
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(30, 30),
     new THREE.MeshStandardMaterial({ color: 0x3fa34d })
@@ -159,32 +159,138 @@ function roomOne() {
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
-  // Barn
-  const barn = new THREE.Mesh(
+  // -------------------- BARN --------------------
+  // Main barn body
+  const barnBody = new THREE.Mesh(
     new THREE.BoxGeometry(4, 3, 4),
-    new THREE.MeshStandardMaterial({ color: 0xb22222 })
+    new THREE.MeshStandardMaterial({ color: 0xb22222 }) // red
   );
-  barn.position.set(-6, 1.5, -4);
-  scene.add(barn);
+  barnBody.position.set(0, 1.5, -8);
+  scene.add(barnBody);
 
-  // Fence
-  for (let i = -10; i <= 10; i += 2) {
+  // Roof (triangular prism)
+  const roofShape = new THREE.Shape();
+  roofShape.moveTo(-2, 0);
+  roofShape.lineTo(0, 1.5);
+  roofShape.lineTo(2, 0);
+  roofShape.lineTo(-2, 0);
+
+  const extrudeSettings = { depth: 4, bevelEnabled: false };
+  const roofGeometry = new THREE.ExtrudeGeometry(roofShape, extrudeSettings);
+  const roof = new THREE.Mesh(
+    roofGeometry,
+    new THREE.MeshStandardMaterial({ color: 0x8b0000 }) // dark red
+  );
+  roof.rotation.x = Math.PI;
+  roof.position.set(0, 3, -10);
+  scene.add(roof);
+
+  // Door
+  const door = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1.5, 0.1),
+    new THREE.MeshStandardMaterial({ color: 0x654321 }) // brown
+  );
+  door.position.set(0, 0.75, -6);
+  scene.add(door);
+
+  // Windows
+  const leftWindow = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.5, 0.1),
+    new THREE.MeshStandardMaterial({ color: 0xffffaa }) // yellow
+  );
+  leftWindow.position.set(-1, 2, -6);
+  scene.add(leftWindow);
+
+  const rightWindow = leftWindow.clone();
+  rightWindow.position.set(1, 2, -6);
+  scene.add(rightWindow);
+
+  // -------------------- FENCES --------------------
+  const fenceColor = 0xc2a679;
+  const postHeight = 1.2;
+  const postSpacing = 2;
+
+  const minX = -15, maxX = 15;
+  const minZ = -15, maxZ = 15;
+  const openingWidth = 4; // opening at front
+
+  function createPost(x, z) {
     const post = new THREE.Mesh(
-      new THREE.BoxGeometry(0.2, 1.2, 0.2),
-      new THREE.MeshStandardMaterial({ color: 0xc2a679 })
+      new THREE.BoxGeometry(0.2, postHeight, 0.2),
+      new THREE.MeshStandardMaterial({ color: fenceColor })
     );
-    post.position.set(i, 0.6, 6);
+    post.position.set(x, postHeight / 2, z);
     scene.add(post);
+    return post;
   }
 
-  // Fake buttons (obvious)
-  createButton(-2, 0, 0xff4444, false);
-  createButton(2, 0, 0x4444ff, false);
+  // Back fence
+  let backPosts = [];
+  for (let x = minX; x <= maxX; x += postSpacing) backPosts.push(createPost(x, minZ));
+  for (let i = 0; i < backPosts.length - 1; i++) {
+    const a = backPosts[i];
+    const b = backPosts[i + 1];
+    const log = new THREE.Mesh(
+      new THREE.BoxGeometry(b.position.x - a.position.x, 0.1, 0.1),
+      new THREE.MeshStandardMaterial({ color: fenceColor })
+    );
+    log.position.set((a.position.x + b.position.x)/2, postHeight*0.7, a.position.z);
+    scene.add(log);
+  }
 
-  // 🐷 Hidden correct button
-  createPigButton(0, -3, true);
+  // Front fence (with opening)
+  let frontPosts = [];
+  for (let x = minX; x <= maxX; x += postSpacing) {
+    if (x > -openingWidth/2 && x < openingWidth/2) continue;
+    frontPosts.push(createPost(x, maxZ));
+  }
+  for (let i = 0; i < frontPosts.length - 1; i++) {
+    const a = frontPosts[i];
+    const b = frontPosts[i + 1];
+    const log = new THREE.Mesh(
+      new THREE.BoxGeometry(b.position.x - a.position.x, 0.1, 0.1),
+      new THREE.MeshStandardMaterial({ color: fenceColor })
+    );
+    log.position.set((a.position.x + b.position.x)/2, postHeight*0.7, a.position.z);
+    scene.add(log);
+  }
+
+  // Left fence
+  let leftPosts = [];
+  for (let z = minZ + postSpacing; z <= maxZ - postSpacing; z += postSpacing) leftPosts.push(createPost(minX, z));
+  for (let i = 0; i < leftPosts.length - 1; i++) {
+    const a = leftPosts[i];
+    const b = leftPosts[i + 1];
+    const log = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 0.1, b.position.z - a.position.z),
+      new THREE.MeshStandardMaterial({ color: fenceColor })
+    );
+    log.position.set(a.position.x, postHeight*0.7, (a.position.z + b.position.z)/2);
+    scene.add(log);
+  }
+
+  // Right fence
+  let rightPosts = [];
+  for (let z = minZ + postSpacing; z <= maxZ - postSpacing; z += postSpacing) rightPosts.push(createPost(maxX, z));
+  for (let i = 0; i < rightPosts.length - 1; i++) {
+    const a = rightPosts[i];
+    const b = rightPosts[i + 1];
+    const log = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 0.1, b.position.z - a.position.z),
+      new THREE.MeshStandardMaterial({ color: fenceColor })
+    );
+    log.position.set(a.position.x, postHeight*0.7, (a.position.z + b.position.z)/2);
+    scene.add(log);
+  }
+
+  // -------------------- BUTTONS --------------------
+  createButton(-4, -2, 0xff4444, false); // fake button
+  createButton(4, -2, 0x4444ff, false);  // fake button
+  createPigButton(0, 0, true);           // hidden pig button
+
+  // -------------------- CAMERA --------------------
+  camera.position.set(0, 1.6, 12); // start inside front opening
 }
-
 
 function roomTwo() {
   scene.background = new THREE.Color(0x111111);
