@@ -89,75 +89,277 @@ function createButton(x, z, color, isCorrect) {
 function createPigButton(x, z, isCorrect) {
   const pigGroup = new THREE.Group();
 
-  const pigMaterial = new THREE.MeshStandardMaterial({ color: 0xffb6c1 });
+  const pigMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffb6c1,
+    roughness: 0.7
+  });
 
-  // Body
+  const darkPink = new THREE.MeshStandardMaterial({ color: 0xff8fa3 });
+  const blackMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+
+  // 🐷 Body
   const body = new THREE.Mesh(
     new THREE.SphereGeometry(0.5, 32, 32),
     pigMaterial
   );
-  body.scale.set(1.2, 1, 1);
+  body.scale.set(1.3, 1, 1);
+  body.castShadow = true;
   pigGroup.add(body);
 
-  // Head
+  // 🐷 Head (parented to body)
   const head = new THREE.Mesh(
     new THREE.SphereGeometry(0.35, 32, 32),
     pigMaterial
   );
-  head.position.set(0, 0.2, 0.6);
-  pigGroup.add(head);
+  head.position.set(0, 0.25, 0.65);
+  head.castShadow = true;
+  body.add(head);
 
-  // Snout
+  // 🐽 Snout
   const snout = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.12, 0.12, 0.15, 16),
-    new THREE.MeshStandardMaterial({ color: 0xff9aa2 })
+    new THREE.CylinderGeometry(0.14, 0.14, 0.18, 20),
+    darkPink
   );
   snout.rotation.x = Math.PI / 2;
-  snout.position.set(0, 0.15, 0.9);
-  pigGroup.add(snout);
+  snout.position.set(0, 0, 0.35);
+  head.add(snout);
 
+  // 👃 Nostrils
+  const nostrilGeo = new THREE.SphereGeometry(0.03, 8, 8);
+
+  const leftNostril = new THREE.Mesh(nostrilGeo, blackMat);
+  leftNostril.position.set(-0.05, 0, 0.46);
+
+  const rightNostril = leftNostril.clone();
+  rightNostril.position.x = 0.05;
+
+  head.add(leftNostril, rightNostril);
+
+  // 👀 Eyes (outside the head)
+  const eyeGeo = new THREE.SphereGeometry(0.05, 12, 12);
+
+  const leftEye = new THREE.Mesh(eyeGeo, blackMat);
+  leftEye.position.set(-0.1, 0.1, 0.45);
+
+  const rightEye = leftEye.clone();
+  rightEye.position.x = 0.1;
+
+  head.add(leftEye, rightEye);
+
+  // 🐽 Ears
+const earGeo = new THREE.SphereGeometry(0.18, 16, 16);
+earGeo.scale(1, 0.6, 0.2); // flatten into ear shape
+
+const leftEar = new THREE.Mesh(earGeo, pigMaterial);
+leftEar.position.set(-0.25, 0.25, 0.05);
+leftEar.rotation.z = Math.PI / 6;
+leftEar.rotation.x = -Math.PI / 10;
+
+const rightEar = leftEar.clone();
+rightEar.position.x = 0.25;
+rightEar.rotation.z = -Math.PI / 6;
+
+head.add(leftEar, rightEar);
+
+
+  // 🦵 Legs (on the ground)
+  const legGeo = new THREE.CylinderGeometry(0.07, 0.09, 0.3, 12);
+  const legY = -0.35;
+
+  const legPositions = [
+    [-0.3, legY,  0.25],
+    [ 0.3, legY,  0.25],
+    [-0.3, legY, -0.25],
+    [ 0.3, legY, -0.25]
+  ];
+
+  legPositions.forEach(([x, y, z]) => {
+    const leg = new THREE.Mesh(legGeo, pigMaterial);
+    leg.position.set(x, y, z);
+    leg.castShadow = true;
+    body.add(leg);
+  });
+
+  // 🌀 Tail
+  const tail = new THREE.Mesh(
+    new THREE.TorusGeometry(0.07, 0.02, 8, 16, Math.PI * 1.5),
+    pigMaterial
+  );
+  tail.position.set(0, 0.15, -0.55);
+  tail.rotation.x = Math.PI / 2;
+  tail.castShadow = true;
+  body.add(tail);
+
+  // 📍 Position pig so feet touch ground
   pigGroup.position.set(x, 0.5, z);
 
-  // Shared click logic
+  // 🖱️ Click logic
   const buttonLogic = {
     fading: false,
     onClick: () => {
       if (isCorrect) {
-        nextRoom(); // ✅ THIS NOW FIRES
+        nextRoom();
       } else {
         buttonLogic.fading = true;
       }
     }
   };
 
-  // ✅ THIS IS THE IMPORTANT PART
   pigGroup.traverse(child => {
     if (child.isMesh) {
       child.userData = buttonLogic;
-      interactive.push(child); // raycaster sees these
+      interactive.push(child);
     }
   });
 
   scene.add(pigGroup);
+  return pigGroup;
 }
 
 
 // -------------------- ROOMS --------------------
 function roomOne() {
-  // -------------------- SKY AND LIGHT --------------------
-  scene.background = new THREE.Color(0x87ceeb); // light blue sky
-  ambient.color.set(0xffffff);
-  ambient.intensity = 0.5;
-  sun.intensity = 1;
-  sun.position.set(10, 20, 10);
+
+scene.background = new THREE.Color(0x87ceeb); // sky blue
+
+// Ambient light (soft fill)
+const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+scene.add(ambient);
+
+// Sun light (directional)
+const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+sunLight.position.set(50, 100, -50);
+sunLight.castShadow = true;
+scene.add(sunLight);
+
+const sunGeometry = new THREE.SphereGeometry(10, 32, 32);
+const sunMaterial = new THREE.MeshBasicMaterial({
+  color: 0xfff4cc
+});
+
+const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+sunMesh.position.copy(sunLight.position);
+scene.add(sunMesh);
+
+const cloudTexture = new THREE.TextureLoader().load('textures/cloud.png');
+cloudTexture.wrapS = cloudTexture.wrapT = THREE.RepeatWrapping;
+
+function createClouds({
+  count = 20,
+  area = 200,
+  height = 50,
+  seed = 1
+} = {}) {
+  const clouds = new THREE.Group();
+  const rng = mulberry32(seed);
+
+  for (let i = 0; i < count; i++) {
+    const material = new THREE.SpriteMaterial({
+      map: cloudTexture,
+      transparent: true,
+      opacity: 0.8,
+      depthWrite: false
+    });
+
+    const cloud = new THREE.Sprite(material);
+
+    const scale = 20 + rng() * 30;
+    cloud.scale.set(scale, scale * 0.6, 1);
+
+    cloud.position.set(
+      (rng() - 0.5) * area,
+      height + rng() * 30,
+      (rng() - 0.5) * area
+    );
+
+    cloud.rotation.z = rng() * Math.PI;
+    clouds.add(cloud);
+  }
+
+  return clouds;
+}
+
+function mulberry32(seed) {
+  return function () {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+const clouds = createClouds({
+  count: 25,
+  area: 300,
+  height: 60,
+  seed: 42
+});
+
+scene.add(clouds);
 
   // -------------------- GRASS FLOOR --------------------
-  const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(30, 30),
-    new THREE.MeshStandardMaterial({ color: 0x3fa34d })
-  );
-  floor.rotation.x = -Math.PI / 2;
-  scene.add(floor);
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(30, 30, 32, 32),
+  new THREE.MeshStandardMaterial({
+    color: 0x3fa34d,
+    roughness: 1,
+    metalness: 0
+  })
+);
+
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+const grassTexture = new THREE.TextureLoader().load('textures/grass-blade.png');
+grassTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+const grassMaterial = new THREE.MeshStandardMaterial({
+  map: grassTexture,
+  transparent: true,
+  side: THREE.DoubleSide,
+  roughness: 1
+});
+
+function createGrass({
+  count = 800,
+  area = 30,
+  seed = 123
+} = {}) {
+  const grass = new THREE.Group();
+  const rng = mulberry32(seed);
+
+  const bladeGeo = new THREE.PlaneGeometry(0.1, 1);
+
+  for (let i = 0; i < count; i++) {
+    const blade = new THREE.Mesh(bladeGeo, grassMaterial);
+
+    blade.position.set(
+      (rng() - 0.5) * area,
+      0.5,
+      (rng() - 0.5) * area
+    );
+
+    blade.rotation.y = rng() * Math.PI;
+    blade.rotation.z = (rng() - 0.5) * 0.2;
+
+    const scale = 0.5 + rng();
+    blade.scale.set(scale, scale, scale);
+
+    blade.castShadow = true;
+    grass.add(blade);
+  }
+
+  return grass;
+}
+
+const grass = createGrass({
+  count: 1000,
+  area: 28,
+  seed: 42
+});
+
+scene.add(grass);
 
   // -------------------- BARN --------------------
   // Main barn body
@@ -286,7 +488,7 @@ function roomOne() {
   // -------------------- BUTTONS --------------------
   createButton(-4, -2, 0xff4444, false); // fake button
   createButton(4, -2, 0x4444ff, false);  // fake button
-  createPigButton(0, 0, true);           // hidden pig button
+  createPigButton(-5, 5, true);         // hidden pig button
 
   // -------------------- CAMERA --------------------
   camera.position.set(0, 1.6, 12); // start inside front opening
