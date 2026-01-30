@@ -362,50 +362,106 @@ const grass = createGrass({
 scene.add(grass);
 
   // -------------------- BARN --------------------
-  // Main barn body
-  const barnBody = new THREE.Mesh(
-    new THREE.BoxGeometry(4, 3, 4),
-    new THREE.MeshStandardMaterial({ color: 0xb22222 }) // red
+// =======================
+// BARN
+// =======================
+const barn = new THREE.Group();
+barn.position.set(0, 0, -8);
+scene.add(barn);
+
+// Materials
+const barnRed = new THREE.MeshStandardMaterial({ color: 0xb22222, roughness: 0.8 });
+const roofRed = new THREE.MeshStandardMaterial({ color: 0x8b0000, roughness: 0.9 });
+const trimWhite = new THREE.MeshStandardMaterial({ color: 0xffffff });
+const doorBrown = new THREE.MeshStandardMaterial({ color: 0x7a4a2e });
+const windowYellow = new THREE.MeshStandardMaterial({ color: 0xffffcc });
+
+// Main body
+const barnBody = new THREE.Mesh(
+  new THREE.BoxGeometry(4.5, 3.5, 5),
+  barnRed
+);
+barnBody.position.y = 1.75;
+barnBody.castShadow = true;
+barnBody.receiveShadow = true;
+barn.add(barnBody);
+
+// Roof
+const roofShape = new THREE.Shape();
+roofShape.moveTo(-2.5, 0);
+roofShape.lineTo(0, 1.8);
+roofShape.lineTo(2.5, 0);
+roofShape.lineTo(-2.5, 0);
+
+const roof = new THREE.Mesh(
+  new THREE.ExtrudeGeometry(roofShape, {
+    depth: 5.4,
+    bevelEnabled: false
+  }),
+  roofRed
+);
+roof.rotation.y = Math.PI / 2;
+roof.position.set(-2.7, 3.5, -2.7);
+roof.castShadow = true;
+barn.add(roof);
+
+// White trim under roof
+const trim = new THREE.Mesh(
+  new THREE.BoxGeometry(4.7, 0.1, 5.05),
+  trimWhite
+);
+trim.position.y = 3.5;
+barn.add(trim);
+
+// Double doors
+const doorLeft = new THREE.Mesh(
+  new THREE.BoxGeometry(1.2, 2, 0.1),
+  doorBrown
+);
+doorLeft.position.set(-0.6, 1, 2.51);
+
+const doorRight = doorLeft.clone();
+doorRight.position.x = 0.6;
+
+barn.add(doorLeft, doorRight);
+
+// X braces on doors
+function addXBrace(parent) {
+  const brace1 = new THREE.Mesh(
+    new THREE.BoxGeometry(1.3, 0.05, 0.05),
+    trimWhite
   );
-  barnBody.position.set(0, 1.5, -8);
-  scene.add(barnBody);
+  brace1.rotation.z = Math.PI / 4;
 
-  // Roof (triangular prism)
-  const roofShape = new THREE.Shape();
-  roofShape.moveTo(-2, 0);
-  roofShape.lineTo(0, 1.5);
-  roofShape.lineTo(2, 0);
-  roofShape.lineTo(-2, 0);
+  const brace2 = brace1.clone();
+  brace2.rotation.z = -Math.PI / 4;
 
-  const extrudeSettings = { depth: 4, bevelEnabled: false };
-  const roofGeometry = new THREE.ExtrudeGeometry(roofShape, extrudeSettings);
-  const roof = new THREE.Mesh(
-    roofGeometry,
-    new THREE.MeshStandardMaterial({ color: 0x8b0000 }) // dark red
-  );
-  roof.rotation.x = Math.PI;
-  roof.position.set(0, 3, -10);
-  scene.add(roof);
+  parent.add(brace1, brace2);
+}
 
-  // Door
-  const door = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1.5, 0.1),
-    new THREE.MeshStandardMaterial({ color: 0x654321 }) // brown
-  );
-  door.position.set(0, 0.75, -6);
-  scene.add(door);
+addXBrace(doorLeft);
+addXBrace(doorRight);
 
-  // Windows
-  const leftWindow = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 0.5, 0.1),
-    new THREE.MeshStandardMaterial({ color: 0xffffaa }) // yellow
-  );
-  leftWindow.position.set(-1, 2, -6);
-  scene.add(leftWindow);
+// Loft window
+const loftWindow = new THREE.Mesh(
+  new THREE.BoxGeometry(0.8, 0.8, 0.1),
+  windowYellow
+);
+loftWindow.position.set(0, 2.8, 2.51);
+barn.add(loftWindow);
 
-  const rightWindow = leftWindow.clone();
-  rightWindow.position.set(1, 2, -6);
-  scene.add(rightWindow);
+// Optional side windows
+const sideWindow = new THREE.Mesh(
+  new THREE.BoxGeometry(0.6, 0.6, 0.1),
+  windowYellow
+);
+sideWindow.position.set(-2.26, 2, 0);
+sideWindow.rotation.y = Math.PI / 2;
+
+const sideWindow2 = sideWindow.clone();
+sideWindow2.position.x = 2.26;
+
+barn.add(sideWindow, sideWindow2);
 
   // -------------------- FENCES --------------------
   const fenceColor = 0xc2a679;
