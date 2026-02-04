@@ -550,6 +550,48 @@ barn.add(sideWindow, sideWindow2);
   camera.position.set(0, 1.6, 12); // start inside front opening
 }
 
+function createTeleportMushroom(x, z) {
+  const mushroom = new THREE.Group();
+
+  // Stem
+  const stem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25, 0.35, 1.4, 16),
+    new THREE.MeshStandardMaterial({ color: 0xf5deb3 })
+  );
+  stem.position.y = 0.7;
+  mushroom.add(stem);
+
+  //Cap
+  const cap = new THREE.Mesh(
+    new THREE.SphereGeometry(0.9, 24, 24, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0xff3333 })
+  );
+  cap.position.y = 1.4;
+  mushroom.add(cap);
+
+  //White button ON the cap
+  const button = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25, 0.25, 0.12, 24),
+    new THREE.MeshStandardMaterial({ color: 0xffffff })
+  );
+
+  // This is the important line 👇
+  // Relative to the cap, not world space
+  button.position.set(0, 0.9, 0);
+  cap.add(button);
+
+  // Click logic
+  button.userData = {
+    fading: false,
+    onClick: () => nextRoom()
+  };
+
+  interactive.push(button);
+
+  mushroom.position.set(x, 0, z);
+  scene.add(mushroom);
+}
+
 function roomTwo() {
   scene.background = new THREE.Color(0x111111);
   ambient.color.set(0xff00ff);
@@ -582,10 +624,16 @@ function roomThree() {
 
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(20, 20),
-    new THREE.MeshStandardMaterial({ color: 0x000000 })
+    new THREE.MeshStandardMaterial({ color: 0xffffff })
   );
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
+
+  const wall = new THREE.Mesh(
+    new THREE.BoxGeometry(3, 3, 0),
+    new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+  );
+  scene.add(wall);
 
   createButton(0, -3, 0xffffff, true);
 }
