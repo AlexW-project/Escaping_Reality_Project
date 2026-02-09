@@ -5,6 +5,10 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
 camera.position.set(0, 1.6, 5);
 
+const textureLoader = new THREE.TextureLoader();
+const mushroomCapTexture = textureLoader.load("textures/mush.png");
+
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -550,71 +554,91 @@ barn.add(sideWindow, sideWindow2);
   camera.position.set(0, 1.6, 12); // start inside front opening
 }
 
-function createTeleportMushroom(x, z) {
+// ----------------------
+// Mushroom Helper Function
+// ----------------------
+function createMushroom(x, z, isTeleportMushroom = false) {
   const mushroom = new THREE.Group();
 
   // Stem
   const stem = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.25, 0.35, 1.4, 16),
+    new THREE.CylinderGeometry(0.2, 0.3, 1.5, 12),
     new THREE.MeshStandardMaterial({ color: 0xf5deb3 })
   );
-  stem.position.y = 0.7;
+  stem.position.y = 0.75;
   mushroom.add(stem);
 
-  //Cap
+  // Cap
   const cap = new THREE.Mesh(
-    new THREE.SphereGeometry(0.9, 24, 24, 0, Math.PI * 2, 0, Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color: 0xff3333 })
-  );
-  cap.position.y = 1.4;
+  new THREE.SphereGeometry(0.9, 24, 24, 0, Math.PI * 2, 0, Math.PI / 2),
+  new THREE.MeshStandardMaterial({
+  map: mushroomCapTexture,
+  roughness: 0.6,
+  metalness: 0
+})
+
+);
+
+
+  cap.position.y = 1.5;
   mushroom.add(cap);
 
-  //White button ON the cap
-  const button = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.25, 0.25, 0.12, 24),
-    new THREE.MeshStandardMaterial({ color: 0xffffff })
-  );
+  // ⭐ TELEPORT BUTTON
+  if (isTeleportMushroom) {
+    const button = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.25, 0.25, 0.12, 24),
+      new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 1
+      })
+    );
 
-  // This is the important line 👇
-  // Relative to the cap, not world space
-  button.position.set(0, 0.9, 0);
-  cap.add(button);
+    button.position.set(0, 0.9, 0); // sits on cap
+    cap.add(button);
 
-  // Click logic
-  button.userData = {
-    fading: false,
-    onClick: () => nextRoom()
-  };
+    button.userData = {
+      fading: false,
+      onClick: () => nextRoom()
+    };
 
-  interactive.push(button);
+    interactive.push(button);
+  }
 
   mushroom.position.set(x, 0, z);
   scene.add(mushroom);
 }
 
-function roomTwo() {
-  scene.background = new THREE.Color(0x111111);
-  ambient.color.set(0xff00ff);
-  sun.intensity = 0.3;
 
+// ----------------------
+// Mushroom-Themed Map 2
+// ----------------------
+function roomTwo() {
+  // Dark, moody mushroom vibe
+  scene.background = new THREE.Color(0x1b0f1f);
+  ambient.color.set(0x884488);
+  sun.intensity = 0.2;
+
+  // Ground
   const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(20, 20),
-    new THREE.MeshStandardMaterial({ color: 0x333333 })
+    new THREE.PlaneGeometry(30, 30),
+    new THREE.MeshStandardMaterial({ color: 0x2b2b1f })
   );
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
-  const rotatingCube = new THREE.Mesh(
-    new THREE.BoxGeometry(),
-    new THREE.MeshStandardMaterial({ color: 0xff8800 })
-  );
-  rotatingCube.position.y = 1;
-  rotatingCube.userData.rotate = true;
-  scene.add(rotatingCube);
+  // Optional fog for atmosphere
+  scene.fog = new THREE.Fog(0x1b0f1f, 6, 25);
 
-  createButton(-4, 0, 0xffff00, false);
-  createButton(0, 0, 0xff00ff, true);
-  createButton(4, 0, 0x00ffff, false);
+  // Decorative mushrooms
+  createMushroom(-6, -4);
+  createMushroom(4, -5);
+  createMushroom(7, 3);
+  createMushroom(-3, 6);
+  createMushroom(2, 4);
+
+  // ONE mushroom hides the teleport spot
+  createMushroom(0, 0, true);
 }
 
 function roomThree() {
@@ -624,16 +648,10 @@ function roomThree() {
 
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(20, 20),
-    new THREE.MeshStandardMaterial({ color: 0xffffff })
+    new THREE.MeshStandardMaterial({ color: 0x000000 })
   );
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
-
-  const wall = new THREE.Mesh(
-    new THREE.BoxGeometry(3, 3, 0),
-    new THREE.MeshStandardMaterial({ color: 0x00ff00 })
-  );
-  scene.add(wall);
 
   createButton(0, -3, 0xffffff, true);
 }
