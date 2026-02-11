@@ -21,12 +21,21 @@ let sun = new THREE.DirectionalLight(0xffffff, 1);
 sun.position.set(10, 20, 10);
 scene.add(sun);
 
-// -------------------- MOVEMENT (WASD) --------------------
-const keys = {};
+// -------------------- MOVEMENT (W / S ONLY) --------------------
+const keys = { w: false, s: false };
 let gameWon = false;
 
-document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+document.addEventListener("keydown", e => {
+  if (e.key === "w" || e.key === "s") {
+    keys[e.key] = true;
+  }
+});
+
+document.addEventListener("keyup", e => {
+  if (e.key === "w" || e.key === "s") {
+    keys[e.key] = false;
+  }
+});
 
 const speed = 0.08;
 
@@ -365,13 +374,13 @@ const grass = createGrass({
 
 scene.add(grass);
 
-  // -------------------- BARN --------------------
-// =======================
+
+
 // BARN
-// =======================
+
 const barn = new THREE.Group();
 barn.position.set(0, 0, -8);
-scene.add(barn);
+
 
 // Materials
 const barnRed = new THREE.MeshStandardMaterial({ color: 0xb22222, roughness: 0.8 });
@@ -467,6 +476,8 @@ sideWindow2.position.x = 2.26;
 
 barn.add(sideWindow, sideWindow2);
 
+scene.add(barn);
+
   // -------------------- FENCES --------------------
   const fenceColor = 0xc2a679;
   const postHeight = 1.2;
@@ -551,7 +562,7 @@ barn.add(sideWindow, sideWindow2);
   createPigButton(-5, 5, true);         // hidden pig button
 
   // -------------------- CAMERA --------------------
-  camera.position.set(0, 1.6, 12); // start inside front opening
+  camera.position.set(0, 1.6, 12); 
 }
 
 // ----------------------
