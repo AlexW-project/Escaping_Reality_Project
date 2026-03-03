@@ -232,7 +232,8 @@ head.add(leftEar, rightEar);
 
 // -------------------- ROOMS --------------------
 function roomOne() {
-
+  
+}
 scene.background = new THREE.Color(0x87ceeb); // sky blue
 
 // Ambient light (soft fill)
