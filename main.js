@@ -1,83 +1,262 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.module.js";
 
-// -------------------- BASIC SETUP --------------------
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
-camera.position.set(0, 1.6, 5);
-
+// -------------------- SETUP --------------------
+const scene    = new THREE.Scene();
+const camera   = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
 // -------------------- LIGHTING --------------------
-let ambient = new THREE.AmbientLight(0xffffff, 0.4);
+const ambient = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambient);
 
-let sun = new THREE.DirectionalLight(0xffffff, 1);
-sun.position.set(10, 20, 10);
+const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+sun.position.set(50, 100, -50);
+sun.castShadow = true;
 scene.add(sun);
 
-// -------------------- MOVEMENT (W / S ONLY) --------------------
-const keys = { w: false, s: false };
-let gameWon = false;
+// -------------------- STATE --------------------
+let gameWon   = false;
+let roomIndex = 0;
+const rooms   = [];
 
-document.addEventListener("keydown", e => {
-  if (e.key === "w" || e.key === "s") keys[e.key] = true;
-});
-
-document.addEventListener("keyup", e => {
-  if (e.key === "w" || e.key === "s") keys[e.key] = false;
-});
-
+// -------------------- INPUT --------------------
+const keys  = { w: false, s: false, a: false, d: false };
 const speed = 0.08;
+document.addEventListener("keydown", e => { if (e.key in keys) keys[e.key] = true;  });
+document.addEventListener("keyup",   e => { if (e.key in keys) keys[e.key] = false; });
 
-// -------------------- INTERACTION --------------------
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
+// -------------------- RAYCASTER --------------------
+const raycaster   = new THREE.Raycaster();
+const mouse       = new THREE.Vector2();
 const interactive = [];
 
 window.addEventListener("click", e => {
   if (gameWon) return;
-
-  mouse.x = (e.clientX / innerWidth) * 2 - 1;
+  mouse.x =  (e.clientX / innerWidth)  * 2 - 1;
   mouse.y = -(e.clientY / innerHeight) * 2 + 1;
-
   raycaster.setFromCamera(mouse, camera);
   const hits = raycaster.intersectObjects(interactive);
-
-  if (hits.length) {
-    hits[0].object.userData.onClick(hits[0].object);
-  }
+  if (hits.length) hits[0].object.userData.onClick();
 });
 
 // -------------------- ROOM SYSTEM --------------------
-let roomIndex = 0;
-const rooms = [];
-
 function clearRoom() {
-  while (scene.children.length > 0) {
-    scene.remove(scene.children[0]);
-  }
+  scene.fog = null;
+  while (scene.children.length) scene.remove(scene.children[0]);
   scene.add(ambient, sun);
   interactive.length = 0;
 }
 
-// -------------------- PIG BUTTON --------------------
-function createPigButton(x, z, isCorrect) {
-  const pigGroup = new THREE.Group();
+function nextRoom() {
+  roomIndex++;
+  clearRoom();
+  if (roomIndex >= rooms.length) return; // Room 3 is the end — do nothing
+  camera.position.set(0, 1.6, 12);
+  rooms[roomIndex]();
+}
 
-  const pigMaterial = new THREE.MeshStandardMaterial({ color: 0xffb6c1, roughness: 0.7 });
+//-----------------------ROOM THREE LOGIC-----------------------
+function createWallButtons({
+  count,
+  startX,
+  startY,
+  z,
+  axis = "x",
+  spacing = 2,
+  rotationY = 0,
+  correctIndex = 0
+}) {
+  const buttons = [];
+
+  for (let i = 0; i < count; i++) {
+    const x = axis === "x" ? startX + i * spacing : startX;
+    const y = startY - Math.floor(i / 3) * spacing;
+    const zPos = z;
+
+    const button = createButton(
+      x,
+      y,
+      zPos,
+      0xff0000,
+      i === correctIndex
+    );
+
+    button.rotation.y = rotationY;
+    buttons.push(button);
+  }
+
+  return buttons;
+}
+
+function addControlBoard({
+  x = 0,
+  y = 4,
+  z = -9.4,
+  rotationY = 0
+} = {}) {
+  const board = new THREE.Group();
+
+  // Main panel
+  const panel = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 10, 0.15),
+    new THREE.MeshStandardMaterial({
+      color: 0x111111,
+      metalness: 0.6,
+      roughness: 0.4
+    })
+  );
+  board.add(panel);
+
+  // Button colors
+  const colors = [
+    0xff4444, // red
+    0x44ff44, // green
+    0x4444ff, // blue
+    0xffff44, // yellow
+    0xff44ff, // magenta
+    0x44ffff  // cyan
+  ];
+
+  const buttonGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.05, 16);
+
+  let index = 0;
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 9; col++) {
+      const button = new THREE.Mesh(
+        buttonGeo,
+        new THREE.MeshStandardMaterial({
+          color: colors[index % colors.length],
+          emissive: colors[index % colors.length],
+          emissiveIntensity: 0.6
+        })
+      );
+
+      button.rotation.x = Math.PI / 2;
+      button.position.set(
+        -3 + col * 0.8,
+        3 - row * 0.8,
+        0.1
+      );
+
+      board.add(button);
+      index++;
+    }
+  }
+
+  board.position.set(x, y, z);
+  board.rotation.y = rotationY;
+  scene.add(board);
+}
+
+function createButton(x, y, z, color, isCorrect) {
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    transparent: true,
+    opacity: 1
+  });
+
+  const button = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.4, 0.4, 0.2, 32),
+    material
+  );
+
+  button.rotation.x = Math.PI / 2; // face outward by default
+  button.position.set(x, y, z);
+
+  button.userData = {
+    isButton: true,
+    isCorrect: isCorrect
+  };
+
+  button.userData = {
+    isCorrect,
+    fading: false,
+    flashing: false,
+    flashTimer: 0,
+    onClick: () => {
+      if (isCorrect) {
+        nextRoom();
+      } else {
+        // choose any animation you like
+        button.userData.flashing = true;
+      }
+    }
+  };
+
+
+  scene.add(button);
+  interactive.push(button);
+  return button;
+}
+
+function updateButtons(delta) {
+  interactive.forEach(button => {
+    const data = button.userData;
+
+    // Fade out
+    if (data.fading) {
+      button.material.opacity -= delta;
+      if (button.material.opacity <= 0) {
+        scene.remove(button);
+        data.fading = false;
+      }
+    }
+
+    // Flash animation
+    if (data.flashing) {
+      data.flashTimer += delta * 10;
+      const flash = Math.sin(data.flashTimer) > 0;
+      button.material.color.set(flash ? 0xffff00 : 0xff0000);
+
+      if (data.flashTimer > Math.PI * 2) {
+        data.flashing = false;
+        data.flashTimer = 0;
+        button.material.color.set(0xff0000);
+      }
+    }
+  });
+}
+
+
+
+
+// -------------------- HELPERS --------------------
+function mulberry32(seed) {
+  return () => {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function attachLogic(group, isCorrect) {
+  const logic = {
+    fading: false,
+    onClick: () => { if (isCorrect) nextRoom(); else logic.fading = true; }
+  };
+  group.traverse(child => {
+    if (child.isMesh) { child.userData = logic; interactive.push(child); }
+  });
+}
+
+// -------------------- PIG --------------------
+function createPig(x, z, isCorrect) {
+  const g        = new THREE.Group();
+  const pink     = new THREE.MeshStandardMaterial({ color: 0xffb6c1, roughness: 0.7 });
   const darkPink = new THREE.MeshStandardMaterial({ color: 0xff8fa3 });
-  const blackMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+  const black    = new THREE.MeshStandardMaterial({ color: 0x222222 });
 
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), pigMaterial);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), pink);
   body.scale.set(1.3, 1, 1);
   body.castShadow = true;
-  pigGroup.add(body);
+  g.add(body);
 
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 32), pigMaterial);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 32), pink);
   head.position.set(0, 0.25, 0.65);
-  head.castShadow = true;
   body.add(head);
 
   const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.18, 20), darkPink);
@@ -85,180 +264,167 @@ function createPigButton(x, z, isCorrect) {
   snout.position.set(0, 0, 0.35);
   head.add(snout);
 
-  const nostrilGeo = new THREE.SphereGeometry(0.03, 8, 8);
-  const leftNostril = new THREE.Mesh(nostrilGeo, blackMat);
-  leftNostril.position.set(-0.05, 0, 0.46);
-  const rightNostril = leftNostril.clone();
-  rightNostril.position.x = 0.05;
-  head.add(leftNostril, rightNostril);
+  [-0.05, 0.05].forEach(nx => {
+    const n = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 8), black);
+    n.position.set(nx, 0, 0.46);
+    head.add(n);
+  });
 
-  const eyeGeo = new THREE.SphereGeometry(0.05, 12, 12);
-  const leftEye = new THREE.Mesh(eyeGeo, blackMat);
-  leftEye.position.set(-0.1, 0.1, 0.45);
-  const rightEye = leftEye.clone();
-  rightEye.position.x = 0.1;
-  head.add(leftEye, rightEye);
+  [-0.1, 0.1].forEach(ex => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), black);
+    eye.position.set(ex, 0.1, 0.45);
+    head.add(eye);
+  });
 
-  const earGeo = new THREE.SphereGeometry(0.18, 16, 16);
-  earGeo.scale(1, 0.6, 0.2);
-  const leftEar = new THREE.Mesh(earGeo, pigMaterial);
-  leftEar.position.set(-0.25, 0.25, 0.05);
-  leftEar.rotation.z = Math.PI / 6;
-  leftEar.rotation.x = -Math.PI / 10;
-  const rightEar = leftEar.clone();
-  rightEar.position.x = 0.25;
-  rightEar.rotation.z = -Math.PI / 6;
-  head.add(leftEar, rightEar);
+  [[-0.25, Math.PI / 6], [0.25, -Math.PI / 6]].forEach(([ex, rz]) => {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), pink);
+    ear.scale.set(1, 0.6, 0.2);
+    ear.position.set(ex, 0.25, 0.05);
+    ear.rotation.z = rz;
+    ear.rotation.x = -Math.PI / 10;
+    head.add(ear);
+  });
 
   const legGeo = new THREE.CylinderGeometry(0.07, 0.09, 0.3, 12);
-  const legY = -0.35;
-  [[-0.3, legY, 0.25], [0.3, legY, 0.25], [-0.3, legY, -0.25], [0.3, legY, -0.25]].forEach(([x, y, z]) => {
-    const leg = new THREE.Mesh(legGeo, pigMaterial);
-    leg.position.set(x, y, z);
-    leg.castShadow = true;
+  [[-0.3, 0.25], [0.3, 0.25], [-0.3, -0.25], [0.3, -0.25]].forEach(([lx, lz]) => {
+    const leg = new THREE.Mesh(legGeo, pink);
+    leg.position.set(lx, -0.35, lz);
     body.add(leg);
   });
 
-  const tail = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.02, 8, 16, Math.PI * 1.5), pigMaterial);
+  const tail = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.02, 8, 16, Math.PI * 1.5), pink);
   tail.position.set(0, 0.15, -0.55);
   tail.rotation.x = Math.PI / 2;
   body.add(tail);
 
-  pigGroup.position.set(x, 0.5, z);
-
-  const buttonLogic = {
-    fading: false,
-    onClick: () => {
-      if (isCorrect) nextRoom();
-      else buttonLogic.fading = true;
-    }
-  };
-
-  pigGroup.traverse(child => {
-    if (child.isMesh) {
-      child.userData = buttonLogic;
-      interactive.push(child);
-    }
-  });
-
-  scene.add(pigGroup);
-  return pigGroup;
+  g.position.set(x, 0.5, z);
+  attachLogic(g, isCorrect);
+  scene.add(g);
 }
 
-// -------------------- COW BUTTON --------------------
-function createCowButton(x, z, isCorrect) {
-  const cowGroup = new THREE.Group();
+// -------------------- COW --------------------
+function createCow(x, z, isCorrect) {
+  const g     = new THREE.Group();
+  const white = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 });
+  const black = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.7 });
+  const pink  = new THREE.MeshStandardMaterial({ color: 0xffb6c1 });
 
-  const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 });
-  const blackMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.7 });
-  const pinkMat  = new THREE.MeshStandardMaterial({ color: 0xffb6c1 });
-
-  // Body
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), whiteMat);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), white);
   body.scale.set(1.4, 1, 1);
   body.castShadow = true;
-  cowGroup.add(body);
+  g.add(body);
 
-  // Spots
-  const spot1 = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), blackMat);
-  spot1.scale.set(1.2, 0.6, 0.2);
-  spot1.position.set(-0.2, 0.1, 0.35);
-  body.add(spot1);
-  const spot2 = spot1.clone();
-  spot2.position.set(0.3, -0.1, -0.2);
-  body.add(spot2);
+  [[-0.2, 0.1, 0.35], [0.3, -0.1, -0.2]].forEach(([sx, sy, sz]) => {
+    const spot = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), black);
+    spot.scale.set(1.2, 0.6, 0.2);
+    spot.position.set(sx, sy, sz);
+    body.add(spot);
+  });
 
-  // Head
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 32), whiteMat);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 32), white);
   head.position.set(0, 0.25, 0.7);
-  head.castShadow = true;
   body.add(head);
 
-  // Snout
-  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.2), pinkMat);
+  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.2), pink);
   snout.position.set(0, -0.05, 0.35);
   head.add(snout);
 
-  // Nostrils
-  const nostrilGeo = new THREE.SphereGeometry(0.03, 8, 8);
-  const leftNostril = new THREE.Mesh(nostrilGeo, blackMat);
-  leftNostril.position.set(-0.08, -0.05, 0.45);
-  const rightNostril = leftNostril.clone();
-  rightNostril.position.x = 0.08;
-  head.add(leftNostril, rightNostril);
+  [-0.08, 0.08].forEach(nx => {
+    const n = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 8), black);
+    n.position.set(nx, -0.05, 0.45);
+    head.add(n);
+  });
 
-  // Eyes
-  const eyeGeo = new THREE.SphereGeometry(0.05, 12, 12);
-  const leftEye = new THREE.Mesh(eyeGeo, blackMat);
-  leftEye.position.set(-0.12, 0.1, 0.4);
-  const rightEye = leftEye.clone();
-  rightEye.position.x = 0.12;
-  head.add(leftEye, rightEye);
+  [-0.12, 0.12].forEach(ex => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), black);
+    eye.position.set(ex, 0.1, 0.4);
+    head.add(eye);
+  });
 
-  // Ears
-  const earGeo = new THREE.BoxGeometry(0.15, 0.15, 0.05);
-  const leftEar = new THREE.Mesh(earGeo, whiteMat);
-  leftEar.position.set(-0.3, 0.15, 0.1);
-  leftEar.rotation.z = Math.PI / 6;
-  const rightEar = leftEar.clone();
-  rightEar.position.x = 0.3;
-  rightEar.rotation.z = -Math.PI / 6;
-  head.add(leftEar, rightEar);
+  [[-0.3, Math.PI / 6], [0.3, -Math.PI / 6]].forEach(([ex, rz]) => {
+    const ear = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.05), white);
+    ear.position.set(ex, 0.15, 0.1);
+    ear.rotation.z = rz;
+    head.add(ear);
+  });
 
-  // Horns
   const hornGeo = new THREE.ConeGeometry(0.05, 0.15, 12);
-  const leftHorn = new THREE.Mesh(hornGeo, whiteMat);
-  leftHorn.position.set(-0.15, 0.3, 0.1);
-  leftHorn.rotation.z = -Math.PI / 8;
-  const rightHorn = leftHorn.clone();
-  rightHorn.position.x = 0.15;
-  rightHorn.rotation.z = Math.PI / 8;
-  head.add(leftHorn, rightHorn);
+  [[-0.15, -Math.PI / 8], [0.15, Math.PI / 8]].forEach(([hx, rz]) => {
+    const horn = new THREE.Mesh(hornGeo, white);
+    horn.position.set(hx, 0.3, 0.1);
+    horn.rotation.z = rz;
+    head.add(horn);
+  });
 
-  // Legs
   const legGeo = new THREE.CylinderGeometry(0.08, 0.1, 0.35, 12);
-  const legY = -0.4;
-  [[-0.35, legY, 0.3], [0.35, legY, 0.3], [-0.35, legY, -0.3], [0.35, legY, -0.3]].forEach(([lx, ly, lz]) => {
-    const leg = new THREE.Mesh(legGeo, whiteMat);
-    leg.position.set(lx, ly, lz);
-    leg.castShadow = true;
+  [[-0.35, 0.3], [0.35, 0.3], [-0.35, -0.3], [0.35, -0.3]].forEach(([lx, lz]) => {
+    const leg = new THREE.Mesh(legGeo, white);
+    leg.position.set(lx, -0.4, lz);
     body.add(leg);
   });
 
-  // Tail
-  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 8), blackMat);
+  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 8), black);
   tail.position.set(0, 0.1, -0.6);
   tail.rotation.x = Math.PI / 4;
   body.add(tail);
 
-  cowGroup.position.set(x, 0.55, z);
-
-  const buttonLogic = {
-    fading: false,
-    onClick: () => {
-      if (isCorrect) nextRoom();
-      else buttonLogic.fading = true;
-    }
-  };
-
-  cowGroup.traverse(child => {
-    if (child.isMesh) {
-      child.userData = buttonLogic;
-      interactive.push(child);
-    }
-  });
-
-  scene.add(cowGroup);
-  return cowGroup;
+  g.position.set(x, 0.55, z);
+  attachLogic(g, isCorrect);
+  scene.add(g);
 }
 
-// -------------------- ROOMS --------------------
+// -------------------- MUSHROOM --------------------
+function createMushroom(x, z, isTeleport = false) {
+  const group = new THREE.Group();
+
+  const stem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2, 0.3, 1.5, 12),
+    new THREE.MeshStandardMaterial({ color: 0xf5deb3 })
+  );
+  stem.position.y = 0.75;
+  group.add(stem);
+
+  const cap = new THREE.Mesh(
+    new THREE.SphereGeometry(0.9, 24, 24, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0xcc2200, roughness: 0.6 })
+  );
+  cap.position.y = 1.5;
+  group.add(cap);
+
+  for (let i = 0; i < 5; i++) {
+    const dot = new THREE.Mesh(
+      new THREE.SphereGeometry(0.07, 8, 8),
+      new THREE.MeshStandardMaterial({ color: 0xffffff })
+    );
+    const angle  = (i / 5) * Math.PI * 2;
+    const radius = 0.45;
+    dot.position.set(Math.cos(angle) * radius, 1.75, Math.sin(angle) * radius);
+    group.add(dot);
+  }
+
+  if (isTeleport) {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.5, 0.06, 8, 24),
+      new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffaa00 })
+    );
+    ring.position.y = 0.1;
+    ring.rotation.x = Math.PI / 2;
+    group.add(ring);
+
+    cap.userData = { onClick: () => nextRoom() };
+    interactive.push(cap);
+  }
+
+  group.position.set(x, 0, z);
+  scene.add(group);
+}
+
+// -------------------- ROOM ONE --------------------
 function roomOne() {
   scene.background = new THREE.Color(0x87ceeb);
 
   ambient.color.set(0xffffff);
   ambient.intensity = 0.4;
-  scene.add(ambient);
 
   const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
   sunLight.position.set(50, 100, -50);
@@ -272,40 +438,21 @@ function roomOne() {
   sunMesh.position.copy(sunLight.position);
   scene.add(sunMesh);
 
-  const cloudTexture = new THREE.TextureLoader().load('textures/cloud.png');
-  cloudTexture.wrapS = cloudTexture.wrapT = THREE.RepeatWrapping;
-
-  function mulberry32(seed) {
-    return function () {
-      let t = seed += 0x6D2B79F5;
-      t = Math.imul(t ^ t >>> 15, t | 1);
-      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    };
-  }
-
-  function createClouds({ count = 20, area = 200, height = 50, seed = 1 } = {}) {
-    const clouds = new THREE.Group();
-    const rng = mulberry32(seed);
-    for (let i = 0; i < count; i++) {
-      const cloud = new THREE.Sprite(new THREE.SpriteMaterial({
-        map: cloudTexture,
-        transparent: true,
-        opacity: 0.8,
-        depthWrite: false
-      }));
-      const scale = 20 + rng() * 30;
-      cloud.scale.set(scale, scale * 0.6, 1);
-      cloud.position.set((rng() - 0.5) * area, height + rng() * 30, (rng() - 0.5) * area);
-      cloud.rotation.z = rng() * Math.PI;
-      clouds.add(cloud);
+  // Clouds — plain white puffs
+  const rngC     = mulberry32(42);
+  const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  for (let i = 0; i < 18; i++) {
+    const cloud = new THREE.Group();
+    for (let j = 0; j < 4; j++) {
+      const puff = new THREE.Mesh(new THREE.SphereGeometry(3 + rngC() * 3, 7, 7), cloudMat);
+      puff.position.set((rngC() - 0.5) * 10, (rngC() - 0.5) * 2, 0);
+      cloud.add(puff);
     }
-    return clouds;
+    cloud.position.set((rngC() - 0.5) * 180, 55 + rngC() * 20, -20 - rngC() * 100);
+    scene.add(cloud);
   }
 
-  scene.add(createClouds({ count: 25, area: 300, height: 60, seed: 42 }));
-
-  // Grass floor
+  // Floor
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(30, 30, 32, 32),
     new THREE.MeshStandardMaterial({ color: 0x3fa34d, roughness: 1, metalness: 0 })
@@ -314,44 +461,27 @@ function roomOne() {
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const grassTexture = new THREE.TextureLoader().load('textures/grass-blade.png');
-  grassTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-
-  const grassMaterial = new THREE.MeshStandardMaterial({
-    map: grassTexture,
-    transparent: true,
-    side: THREE.DoubleSide,
-    roughness: 1
-  });
-
-  function createGrass({ count = 800, area = 30, seed = 123 } = {}) {
-    const grass = new THREE.Group();
-    const rng = mulberry32(seed);
-    const bladeGeo = new THREE.PlaneGeometry(0.1, 1);
-    for (let i = 0; i < count; i++) {
-      const blade = new THREE.Mesh(bladeGeo, grassMaterial);
-      blade.position.set((rng() - 0.5) * area, 0.5, (rng() - 0.5) * area);
-      blade.rotation.y = rng() * Math.PI;
-      blade.rotation.z = (rng() - 0.5) * 0.2;
-      const scale = 0.5 + rng();
-      blade.scale.set(scale, scale, scale);
-      blade.castShadow = true;
-      grass.add(blade);
-    }
-    return grass;
+  // Grass blades
+  const bladeGeo = new THREE.PlaneGeometry(0.1, 0.6);
+  const bladeMat = new THREE.MeshStandardMaterial({ color: 0x2d8b3a, side: THREE.DoubleSide });
+  const rngG     = mulberry32(7);
+  for (let i = 0; i < 600; i++) {
+    const blade = new THREE.Mesh(bladeGeo, bladeMat);
+    blade.position.set((rngG() - 0.5) * 28, 0.3, (rngG() - 0.5) * 28);
+    blade.rotation.y = rngG() * Math.PI;
+    const s = 0.6 + rngG() * 0.8;
+    blade.scale.set(s, s, s);
+    scene.add(blade);
   }
 
-  scene.add(createGrass({ count: 1000, area: 28, seed: 42 }));
-
   // Barn
-  const barn = new THREE.Group();
+  const barn    = new THREE.Group();
   barn.position.set(0, 0, -8);
-
-  const barnRed   = new THREE.MeshStandardMaterial({ color: 0xb22222, roughness: 0.8 });
-  const roofRed   = new THREE.MeshStandardMaterial({ color: 0x8b0000, roughness: 0.9 });
-  const trimWhite = new THREE.MeshStandardMaterial({ color: 0xffffff });
-  const doorBrown = new THREE.MeshStandardMaterial({ color: 0x7a4a2e });
-  const windowYellow = new THREE.MeshStandardMaterial({ color: 0xffffcc });
+  const barnRed = new THREE.MeshStandardMaterial({ color: 0xb22222, roughness: 0.8 });
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b0000, roughness: 0.9 });
+  const whtMat  = new THREE.MeshStandardMaterial({ color: 0xffffff });
+  const doorMat = new THREE.MeshStandardMaterial({ color: 0x7a4a2e });
+  const winMat  = new THREE.MeshStandardMaterial({ color: 0xffffcc });
 
   const barnBody = new THREE.Mesh(new THREE.BoxGeometry(4.5, 3.5, 5), barnRed);
   barnBody.position.y = 1.75;
@@ -360,219 +490,96 @@ function roomOne() {
   barn.add(barnBody);
 
   const roofShape = new THREE.Shape();
-  roofShape.moveTo(-2.5, 0);
-  roofShape.lineTo(0, 1.8);
-  roofShape.lineTo(2.5, 0);
-  roofShape.lineTo(-2.5, 0);
-
+  roofShape.moveTo(-2.5, 0); roofShape.lineTo(0, 1.8);
+  roofShape.lineTo(2.5, 0);  roofShape.lineTo(-2.5, 0);
   const roof = new THREE.Mesh(
-    new THREE.ExtrudeGeometry(roofShape, { depth: 5.4, bevelEnabled: false }),
-    roofRed
+    new THREE.ExtrudeGeometry(roofShape, { depth: 5.4, bevelEnabled: false }), roofMat
   );
   roof.rotation.y = Math.PI / 2;
   roof.position.set(-2.7, 3.5, -2.7);
   roof.castShadow = true;
   barn.add(roof);
 
-  const trim = new THREE.Mesh(new THREE.BoxGeometry(4.7, 0.1, 5.05), trimWhite);
+  const trim = new THREE.Mesh(new THREE.BoxGeometry(4.7, 0.1, 5.05), whtMat);
   trim.position.y = 3.5;
   barn.add(trim);
 
-  const doorLeft  = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2, 0.1), doorBrown);
-  doorLeft.position.set(-0.6, 1, 2.51);
-  const doorRight = doorLeft.clone();
-  doorRight.position.x = 0.6;
-  barn.add(doorLeft, doorRight);
+  [[-0.6, 1, 2.51], [0.6, 1, 2.51]].forEach(([dx, dy, dz]) => {
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2, 0.1), doorMat);
+    door.position.set(dx, dy, dz);
+    [Math.PI / 4, -Math.PI / 4].forEach(rz => {
+      const brace = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.05, 0.05), whtMat);
+      brace.rotation.z = rz;
+      door.add(brace);
+    });
+    barn.add(door);
+  });
 
-  function addXBrace(parent) {
-    const brace1 = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.05, 0.05), trimWhite);
-    brace1.rotation.z = Math.PI / 4;
-    const brace2 = brace1.clone();
-    brace2.rotation.z = -Math.PI / 4;
-    parent.add(brace1, brace2);
-  }
-  addXBrace(doorLeft);
-  addXBrace(doorRight);
+  const loftWin = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.1), winMat);
+  loftWin.position.set(0, 2.8, 2.51);
+  barn.add(loftWin);
 
-  const loftWindow = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.1), windowYellow);
-  loftWindow.position.set(0, 2.8, 2.51);
-  barn.add(loftWindow);
-
-  const sideWindow = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.1), windowYellow);
-  sideWindow.position.set(-2.26, 2, 0);
-  sideWindow.rotation.y = Math.PI / 2;
-  const sideWindow2 = sideWindow.clone();
-  sideWindow2.position.x = 2.26;
-  barn.add(sideWindow, sideWindow2);
+  [-2.26, 2.26].forEach(wx => {
+    const win = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.1), winMat);
+    win.position.set(wx, 2, 0);
+    win.rotation.y = Math.PI / 2;
+    barn.add(win);
+  });
 
   scene.add(barn);
 
   // Fences
-  const fenceColor  = 0xc2a679;
-  const postHeight  = 1.2;
-  const postSpacing = 2;
-  const minX = -15, maxX = 15, minZ = -15, maxZ = 15;
-  const openingWidth = 4;
+  const fenceMat = new THREE.MeshStandardMaterial({ color: 0xc2a679 });
+  const postH = 1.2, spacing = 2, bound = 15, gapHalf = 2;
 
-  function createPost(x, z) {
-    const post = new THREE.Mesh(
-      new THREE.BoxGeometry(0.2, postHeight, 0.2),
-      new THREE.MeshStandardMaterial({ color: fenceColor })
-    );
-    post.position.set(x, postHeight / 2, z);
-    scene.add(post);
-    return post;
+  function post(x, z) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(0.2, postH, 0.2), fenceMat);
+    p.position.set(x, postH / 2, z);
+    scene.add(p);
+    return p;
+  }
+  function hRail(x1, x2, z) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(x2 - x1, 0.1, 0.1), fenceMat);
+    r.position.set((x1 + x2) / 2, postH * 0.7, z);
+    scene.add(r);
+  }
+  function vRail(x, z1, z2) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, z2 - z1), fenceMat);
+    r.position.set(x, postH * 0.7, (z1 + z2) / 2);
+    scene.add(r);
   }
 
-  function connectPosts(posts, axis) {
-    for (let i = 0; i < posts.length - 1; i++) {
-      const a = posts[i], b = posts[i + 1];
-      const w = axis === 'x' ? b.position.x - a.position.x : 0.1;
-      const d = axis === 'z' ? b.position.z - a.position.z : 0.1;
-      const log = new THREE.Mesh(
-        new THREE.BoxGeometry(w, 0.1, d),
-        new THREE.MeshStandardMaterial({ color: fenceColor })
-      );
-      log.position.set(
-        (a.position.x + b.position.x) / 2,
-        postHeight * 0.7,
-        (a.position.z + b.position.z) / 2
-      );
-      scene.add(log);
+  for (let x = -bound; x <= bound; x += spacing) {
+    post(x, -bound);
+    if (x + spacing <= bound) hRail(x, x + spacing, -bound);
+  }
+  for (let x = -bound; x <= bound; x += spacing) {
+    if (x > -gapHalf && x < gapHalf) continue;
+    post(x, bound);
+    const nx = x + spacing;
+    if (nx <= bound && !(nx > -gapHalf && nx < gapHalf)) hRail(x, nx, bound);
+  }
+  for (let z = -bound + spacing; z <= bound - spacing; z += spacing) {
+    post(-bound, z); post(bound, z);
+    if (z + spacing <= bound - spacing) {
+      vRail(-bound, z, z + spacing);
+      vRail(bound,  z, z + spacing);
     }
   }
 
-  const backPosts  = [];
-  for (let x = minX; x <= maxX; x += postSpacing) backPosts.push(createPost(x, minZ));
-  connectPosts(backPosts, 'x');
+  createCow(-4, -2, false);
+  createCow( 4, -2, false);
+  createPig(-5,  5, true);
 
-  const frontPosts = [];
-  for (let x = minX; x <= maxX; x += postSpacing) {
-    if (x > -openingWidth / 2 && x < openingWidth / 2) continue;
-    frontPosts.push(createPost(x, maxZ));
-  }
-  connectPosts(frontPosts, 'x');
-
-  const leftPosts  = [];
-  for (let z = minZ + postSpacing; z <= maxZ - postSpacing; z += postSpacing) leftPosts.push(createPost(minX, z));
-  connectPosts(leftPosts, 'z');
-
-  const rightPosts = [];
-  for (let z = minZ + postSpacing; z <= maxZ - postSpacing; z += postSpacing) rightPosts.push(createPost(maxX, z));
-  connectPosts(rightPosts, 'z');
-
-  // -------------------- ANIMALS --------------------
-  createCowButton(-4, -2, false); // wrong answer
-  createCowButton( 4, -2, false); // wrong answer
-  createPigButton(-5,  5, true);  // correct answer
-
-  // Camera
   camera.position.set(0, 1.6, 12);
 }
 
-// -------------------- NEXT ROOM --------------------
-function nextRoom() {
-  roomIndex++;
-  clearRoom();
-  if (rooms[roomIndex]) rooms[roomIndex]();
-}
-
-rooms.push(roomOne);
-roomOne();
-
-// -------------------- ANIMATE --------------------
-function animate() {
-  requestAnimationFrame(animate);
-
-  // Fade out wrong-answer animals
-  interactive.forEach(mesh => {
-    if (mesh.userData.fading) {
-      mesh.material.transparent = true;
-      mesh.material.opacity = Math.max(0, mesh.material.opacity - 0.02);
-    }
-  });
-
-  // W/S movement
-  if (keys.w) camera.position.z -= speed;
-  if (keys.s) camera.position.z += speed;
-
-  renderer.render(scene, camera);
-}
-
-animate();
-
-window.addEventListener("resize", () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
-
-// ----------------------
-// Mushroom Helper Function
-// ----------------------
-function createMushroom(x, z, isTeleportMushroom = false) {
-  const mushroom = new THREE.Group();
-
-  // Stem
-  const stem = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.2, 0.3, 1.5, 12),
-    new THREE.MeshStandardMaterial({ color: 0xf5deb3 })
-  );
-  stem.position.y = 0.75;
-  mushroom.add(stem);
-
-  // Cap
-  const cap = new THREE.Mesh(
-  new THREE.SphereGeometry(0.9, 24, 24, 0, Math.PI * 2, 0, Math.PI / 2),
-  new THREE.MeshStandardMaterial({
-  map: mushroomCapTexture,
-  roughness: 0.6,
-  metalness: 0
-})
-
-);
-
-
-  cap.position.y = 1.5;
-  mushroom.add(cap);
-
-  // ⭐ TELEPORT BUTTON
-  if (isTeleportMushroom) {
-    const button = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.25, 0.25, 0.12, 24),
-      new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 1
-      })
-    );
-
-    button.position.set(0, 0.9, 0); // sits on cap
-    cap.add(button);
-
-    button.userData = {
-      fading: false,
-      onClick: () => nextRoom()
-    };
-
-    interactive.push(button);
-  }
-
-  mushroom.position.set(x, 0, z);
-  scene.add(mushroom);
-}
-
-
-// ----------------------
-// Mushroom-Themed Map 2
-// ----------------------
+// -------------------- ROOM TWO (ORIGINAL) --------------------
 function roomTwo() {
-  // Dark, moody mushroom vibe
   scene.background = new THREE.Color(0x1b0f1f);
   ambient.color.set(0x884488);
   sun.intensity = 0.2;
 
-  // Ground
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(30, 30),
     new THREE.MeshStandardMaterial({ color: 0x2b2b1f })
@@ -580,20 +587,17 @@ function roomTwo() {
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
-  // Optional fog for atmosphere
   scene.fog = new THREE.Fog(0x1b0f1f, 6, 25);
 
-  // Decorative mushrooms
   createMushroom(-6, -4);
   createMushroom(4, -5);
   createMushroom(7, 3);
   createMushroom(-3, 6);
   createMushroom(2, 4);
-
-  // ONE mushroom hides the teleport spot
   createMushroom(0, 0, true);
 }
 
+// -------------------- ROOM THREE (FINAL) --------------------
 function roomThree() {
   scene.background = new THREE.Color(0x000022);
   ambient.color.set(0x00ffff);
@@ -601,113 +605,110 @@ function roomThree() {
 
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(20, 20),
-    new THREE.MeshStandardMaterial({ color: 0x000000 })
+    new THREE.MeshStandardMaterial({ color: 0xffffff })
   );
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
-  createButton(0, -3, 0xffffff, true);
-}
+  const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
 
+  const wall1 = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 0.5), wallMaterial);
+  wall1.position.set(0, 4, -10);
+  scene.add(wall1);
+
+  const wall2 = wall1.clone();
+  wall2.rotation.y = Math.PI / 2;
+  wall2.position.set(-10, 4, 0);
+  scene.add(wall2);
+
+  const wall3 = wall2.clone();
+  wall3.position.set(10, 4, 0);
+  scene.add(wall3);
+  
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(20, 1, 20), wallMaterial);
+    roof.position.set(0, 9, 0);
+  scene.add(roof);
+
+
+  // BACK WALL BUTTONS
+  createWallButtons({
+    count: 6,
+    startX: -4,
+    startY: 5,
+    z: -9.6,
+    spacing: 2,
+    rotationY: 0,
+    correctIndex: 2
+  });
+
+  // LEFT WALL BUTTONS
+  createWallButtons({
+    count: 4,
+    startX: -8,
+    startY: 3,
+    z: -9.6,
+    spacing: 2,
+    rotationY: 3*Math.PI / 2,
+    correctIndex: 1
+  });
+
+  // RIGHT WALL BUTTONS
+  createWallButtons({
+    count: 4,
+    startX: 2,
+    startY: 7,
+    z: -9.6,
+    spacing: 2,
+    rotationY: 5,
+    correctIndex: 3
+  });
+
+    addControlBoard({
+    x: -9.4,
+    y: 4,
+    z: 0,
+    rotationY: Math.PI / 2
+  });
+}
+// -------------------- ROOMS LIST --------------------
 rooms.push(roomOne, roomTwo, roomThree);
 
-// -------------------- WIN ROOM --------------------
-function winRoom() {
-  gameWon = true;
-  clearRoom();
+// -------------------- START --------------------
+roomOne();
 
-  scene.background = new THREE.Color(0x0a0a23);
-  ambient.color.set(0x5555ff);
-  ambient.intensity = 0.6;
-  sun.intensity = 0.2;
-
-  // Ground
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(50, 50),
-    new THREE.MeshStandardMaterial({ color: 0x111111 })
-  );
-  ground.rotation.x = -Math.PI / 2;
-  scene.add(ground);
-
-  // Buildings
-  for (let i = 0; i < 25; i++) {
-    const h = Math.random() * 8 + 4;
-    const building = new THREE.Mesh(
-      new THREE.BoxGeometry(2, h, 2),
-      new THREE.MeshStandardMaterial({
-        color: 0x222222,
-        emissive: 0x111155
-      })
-    );
-
-    building.position.set(
-      (Math.random() - 0.5) * 30,
-      h / 2,
-      (Math.random() - 0.5) * 30
-    );
-    scene.add(building);
-  }
-
-  // YOU WIN sign
-  const winSign = new THREE.Mesh(
-    new THREE.PlaneGeometry(8, 3),
-    new THREE.MeshBasicMaterial({ color: 0x00ffff })
-  );
-  winSign.position.set(0, 4, -10);
-  scene.add(winSign);
-
-  camera.position.set(0, 3, 10);
-}
-
-// -------------------- ROOM TRANSITION --------------------
-function nextRoom() {
-  clearRoom();
-  roomIndex++;
-
-  if (roomIndex >= rooms.length) {
-    winRoom();
-    return;
-  }
-
-  camera.position.set(0, 1.6, 5);
-  rooms[roomIndex]();
-}
-
-// -------------------- ANIMATION LOOP --------------------
+// -------------------- ANIMATE --------------------
 function animate() {
   requestAnimationFrame(animate);
 
-  const dir = new THREE.Vector3();
-  camera.getWorldDirection(dir);
-  dir.y = 0;
-  dir.normalize();
-
-  const right = new THREE.Vector3().crossVectors(camera.up, dir).normalize();
-
   if (!gameWon) {
-    if (keys["w"]) camera.position.addScaledVector(dir, speed);
-    if (keys["s"]) camera.position.addScaledVector(dir, -speed);
-    if (keys["a"]) camera.position.addScaledVector(right, speed);
-    if (keys["d"]) camera.position.addScaledVector(right, -speed);
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    dir.y = 0;
+    dir.normalize();
+
+    if (keys.w) camera.position.addScaledVector(dir,  speed);
+    if (keys.s) camera.position.addScaledVector(dir, -speed);
+
+    // A/D only allowed outside room 1
+    if (roomIndex > 0) {
+      const right = new THREE.Vector3().crossVectors(camera.up, dir).normalize();
+      if (keys.a) camera.position.addScaledVector(right,  speed);
+      if (keys.d) camera.position.addScaledVector(right, -speed);
+    }
   }
 
-  scene.traverse(obj => {
-    if (obj.userData.rotate) {
-      obj.rotation.y += 0.01;
-    }
-    if (obj.userData.fading) {
-      obj.material.opacity -= 0.02;
-      if (obj.material.opacity <= 0) {
-        scene.remove(obj);
-      }
+  interactive.forEach(mesh => {
+    if (mesh.userData.fading) {
+      mesh.material.transparent = true;
+      mesh.material.opacity = Math.max(0, (mesh.material.opacity ?? 1) - 0.02);
     }
   });
 
   renderer.render(scene, camera);
 }
+const clock = new THREE.Clock();
 
-// -------------------- START --------------------
-rooms[0]();
 animate();
 
 // -------------------- RESIZE --------------------
