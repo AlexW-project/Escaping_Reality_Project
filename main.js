@@ -670,6 +670,13 @@ function roomThree() {
     z: 0,
     rotationY: Math.PI / 2
   });
+
+    addControlBoard({
+    x: 9.4,
+    y: 4,
+    z: 0,
+    rotationY: -Math.PI / 2
+  });
 }
 // -------------------- ROOMS LIST --------------------
 rooms.push(roomOne, roomTwo, roomThree);
