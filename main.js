@@ -22,6 +22,26 @@ let gameWon   = false;
 let roomIndex = 0;
 const rooms   = [];
 
+// -------------------- STALKER STATE --------------------
+let stalker       = null;
+let stalkerLight  = null;
+let stalkerActive = false;
+let stalkerSpeed  = 0.012;
+let stalkerWarned = false;
+let heartbeatTime = 0;
+
+// HUD overlays injected into the page
+const _heartbeatEl = (() => {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(180,0,0,0) 30%,rgba(180,0,0,0.4) 100%);z-index:11;opacity:0;transition:opacity 0.08s;';
+  document.body.appendChild(el); return el;
+})();
+const _stalkerMsgEl = (() => {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;bottom:40px;left:50%;transform:translateX(-50%);color:#ff3333;font-family:monospace;font-size:13px;letter-spacing:4px;text-transform:uppercase;pointer-events:none;opacity:0;text-shadow:0 0 12px #ff0000;transition:opacity 1.2s;z-index:20;';
+  document.body.appendChild(el); return el;
+})();
+
 // -------------------- INPUT --------------------
 const keys  = { w: false, s: false, a: false, d: false };
 const speed = 0.08;
@@ -48,6 +68,11 @@ function clearRoom() {
   while (scene.children.length) scene.remove(scene.children[0]);
   scene.add(ambient, sun);
   interactive.length = 0;
+  stalker = null; stalkerLight = null;
+  stalkerActive = false; stalkerWarned = false;
+  stalkerSpeed = 0.012;
+  _heartbeatEl.style.opacity  = '0';
+  _stalkerMsgEl.style.opacity = '0';
 }
 
 function nextRoom() {
@@ -377,39 +402,68 @@ function createCow(x, z, isCorrect) {
 function createMushroom(x, z, isTeleport = false) {
   const group = new THREE.Group();
 
-  const stem = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.2, 0.3, 1.5, 12),
-    new THREE.MeshStandardMaterial({ color: 0xf5deb3 })
-  );
+  const stemMat = new THREE.MeshStandardMaterial({
+    color: 0xd4c49a,
+    emissive: isTeleport ? 0x44ff22 : 0x223311,
+    emissiveIntensity: isTeleport ? 0.5 : 0.12, roughness: 0.9
+  });
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 1.5, 12), stemMat);
   stem.position.y = 0.75;
   group.add(stem);
 
+  // Gill ring under cap
+  const gills = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.85, 0.25, 0.1, 20),
+    new THREE.MeshStandardMaterial({ color: 0xffe0c8, roughness: 1 })
+  );
+  gills.position.y = 1.48;
+  group.add(gills);
+
+  const capColor    = isTeleport ? 0x00ff88 : 0xcc2200;
+  const capEmissive = isTeleport ? 0x00bb44 : 0x440800;
   const cap = new THREE.Mesh(
     new THREE.SphereGeometry(0.9, 24, 24, 0, Math.PI * 2, 0, Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color: 0xcc2200, roughness: 0.6 })
+    new THREE.MeshStandardMaterial({ color: capColor, emissive: capEmissive, emissiveIntensity: 0.4, roughness: 0.5 })
   );
   cap.position.y = 1.5;
   group.add(cap);
 
-  for (let i = 0; i < 5; i++) {
+  const dotCount = isTeleport ? 7 : 5;
+  for (let i = 0; i < dotCount; i++) {
     const dot = new THREE.Mesh(
       new THREE.SphereGeometry(0.07, 8, 8),
-      new THREE.MeshStandardMaterial({ color: 0xffffff })
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.4 })
     );
-    const angle  = (i / 5) * Math.PI * 2;
-    const radius = 0.45;
+    const angle = (i / dotCount) * Math.PI * 2, radius = 0.45;
     dot.position.set(Math.cos(angle) * radius, 1.75, Math.sin(angle) * radius);
     group.add(dot);
   }
 
+  // Point light from each mushroom
+  const mLight = new THREE.PointLight(
+    isTeleport ? 0x00ff88 : 0xff4400,
+    isTeleport ? 1.5 : 0.7,
+    isTeleport ? 8 : 4.5
+  );
+  mLight.position.set(0, 1.8, 0);
+  group.add(mLight);
+
   if (isTeleport) {
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(0.5, 0.06, 8, 24),
-      new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffaa00 })
+      new THREE.MeshStandardMaterial({ color: 0x00ffaa, emissive: 0x00ff88, emissiveIntensity: 1 })
     );
     ring.position.y = 0.1;
     ring.rotation.x = Math.PI / 2;
     group.add(ring);
+
+    const outerRing = new THREE.Mesh(
+      new THREE.TorusGeometry(1.1, 0.04, 8, 32),
+      new THREE.MeshStandardMaterial({ color: 0x00ffaa, emissive: 0x00ff88, emissiveIntensity: 0.5 })
+    );
+    outerRing.position.y = 0.05;
+    outerRing.rotation.x = Math.PI / 2;
+    group.add(outerRing);
 
     cap.userData = { onClick: () => nextRoom() };
     interactive.push(cap);
@@ -417,6 +471,7 @@ function createMushroom(x, z, isTeleport = false) {
 
   group.position.set(x, 0, z);
   scene.add(group);
+  return group;
 }
 
 // -------------------- ROOM ONE --------------------
@@ -574,27 +629,163 @@ function roomOne() {
   camera.position.set(0, 1.6, 12);
 }
 
-// -------------------- ROOM TWO (ORIGINAL) --------------------
+// -------------------- ROOM TWO --------------------
 function roomTwo() {
-  scene.background = new THREE.Color(0x1b0f1f);
-  ambient.color.set(0x884488);
-  sun.intensity = 0.2;
+  scene.background = new THREE.Color(0x0d0818);
+  ambient.color.set(0x8866aa);
+  ambient.intensity = 0.6;
+  sun.intensity = 0.15;
 
+  // Fog — visible ~10-12 units ahead
+  scene.fog = new THREE.FogExp2(0x0d0818, 0.1);
+
+  // Dark mossy ground
   const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(30, 30),
-    new THREE.MeshStandardMaterial({ color: 0x2b2b1f })
+    new THREE.PlaneGeometry(60, 60, 30, 30),
+    new THREE.MeshStandardMaterial({ color: 0x0b1208, roughness: 1, metalness: 0 })
   );
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
-  scene.fog = new THREE.Fog(0x1b0f1f, 6, 25);
+  // Reflective puddles
+  const rngP = mulberry32(99);
+  for (let i = 0; i < 22; i++) {
+    const puddle = new THREE.Mesh(
+      new THREE.CircleGeometry(0.3 + rngP() * 0.9, 14),
+      new THREE.MeshStandardMaterial({ color: 0x112233, roughness: 0.05, metalness: 0.95 })
+    );
+    puddle.rotation.x = -Math.PI / 2;
+    puddle.position.set((rngP() - 0.5) * 32, 0.01, (rngP() - 0.5) * 32);
+    scene.add(puddle);
+  }
 
+  // Dead twisted trees
+  const rngT = mulberry32(55);
+  const barkMat = new THREE.MeshStandardMaterial({ color: 0x120c05, roughness: 1 });
+  for (let i = 0; i < 18; i++) {
+    const tx = (rngT() - 0.5) * 30, tz = (rngT() - 0.5) * 30;
+    if (Math.abs(tx) < 2.5 && Math.abs(tz) < 2.5) continue;
+    const treeH = 3.5 + rngT() * 5;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.2, treeH, 7), barkMat);
+    trunk.position.set(tx, treeH / 2, tz);
+    trunk.rotation.z = (rngT() - 0.5) * 0.25;
+    scene.add(trunk);
+    for (let b = 0; b < 4; b++) {
+      const brLen = 0.7 + rngT() * 1.4;
+      const br = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.07, brLen, 5), barkMat);
+      br.position.set(tx + (rngT() - 0.5) * 0.8, treeH * 0.55 + b * 0.8, tz + (rngT() - 0.5) * 0.8);
+      br.rotation.set((rngT() - 0.5) * 1.4, rngT() * Math.PI * 2, (rngT() - 0.5) * 1.6);
+      scene.add(br);
+    }
+  }
+
+  // Scattered rocks
+  const rngR = mulberry32(77);
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.95 });
+  for (let i = 0; i < 25; i++) {
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.12 + rngR() * 0.38, 0), rockMat);
+    rock.position.set((rngR() - 0.5) * 30, 0.1, (rngR() - 0.5) * 30);
+    rock.rotation.set(rngR() * Math.PI, rngR() * Math.PI, rngR() * Math.PI);
+    scene.add(rock);
+  }
+
+  // Mushrooms — scattered wider, more atmospheric
   createMushroom(-6, -4);
-  createMushroom(4, -5);
-  createMushroom(7, 3);
-  createMushroom(-3, 6);
-  createMushroom(2, 4);
-  createMushroom(0, 0, true);
+  createMushroom( 4, -5);
+  createMushroom( 7,  3);
+  createMushroom(-3,  6);
+  createMushroom( 2,  4);
+  createMushroom(-9, -7);
+  createMushroom( 8,  8);
+  createMushroom(-5, 10);
+  createMushroom( 7, -9);
+  createMushroom( 0,  0, true); // teleport mushroom
+
+  // Floating wisps drifting through fog
+  const wispColors = [0x5500bb, 0x003366, 0x001a00, 0x330044, 0x002200];
+  const rngW = mulberry32(33);
+  for (let i = 0; i < 12; i++) {
+    const col  = wispColors[Math.floor(rngW() * wispColors.length)];
+    const wisp = new THREE.PointLight(col, 0.7 + rngW() * 0.6, 5);
+    wisp.position.set((rngW() - 0.5) * 22, 0.4 + rngW() * 1.8, (rngW() - 0.5) * 22);
+    wisp.userData = {
+      baseY: wisp.position.y,
+      baseX: wisp.position.x,
+      phase: rngW() * Math.PI * 2,
+      speed: 0.3 + rngW() * 0.35
+    };
+    scene.add(wisp);
+    // Tiny visible orb
+    const orb = new THREE.Mesh(
+      new THREE.SphereGeometry(0.06, 8, 8),
+      new THREE.MeshBasicMaterial({ color: col })
+    );
+    wisp.add(orb);
+  }
+
+  // Spawn the stalker
+  stalker = createStalker();
+  stalkerActive = true;
+
+  // Start further back so player has to search for the green mushroom
+  camera.position.set(0, 1.6, 25);
+}
+
+// -------------------- STALKER --------------------
+function createStalker() {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x110022, emissiveIntensity: 1, roughness: 1 });
+  const headMat = new THREE.MeshStandardMaterial({ color: 0x050005, emissive: 0x220033, emissiveIntensity: 0.8, roughness: 1 });
+
+  // Torso
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 1.4, 8), bodyMat);
+  torso.position.y = 1.6;
+  g.add(torso);
+
+  // Featureless elongated head
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 12), headMat);
+  head.scale.set(0.85, 1.2, 0.85);
+  head.position.y = 2.55;
+  g.add(head);
+
+  // Red glowing eyes
+  [-0.1, 0.1].forEach(ex => {
+    const eye = new THREE.Mesh(
+      new THREE.SphereGeometry(0.045, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xff0000 })
+    );
+    eye.position.set(ex, 2.62, 0.22);
+    g.add(eye);
+    const eyeGlow = new THREE.PointLight(0xff0000, 0.4, 1.5);
+    eyeGlow.position.set(ex, 2.62, 0.22);
+    g.add(eyeGlow);
+  });
+
+  // Long hanging arms
+  const armGeo = new THREE.CylinderGeometry(0.07, 0.05, 1.2, 8);
+  [-0.42, 0.42].forEach((ax, i) => {
+    const arm = new THREE.Mesh(armGeo, bodyMat);
+    arm.position.set(ax, 1.3, 0);
+    arm.rotation.z = i === 0 ? 0.25 : -0.25;
+    g.add(arm);
+  });
+
+  // Legs
+  const legGeo = new THREE.CylinderGeometry(0.1, 0.08, 0.9, 8);
+  [-0.18, 0.18].forEach(lx => {
+    const leg = new THREE.Mesh(legGeo, bodyMat);
+    leg.position.set(lx, 0.5, 0);
+    g.add(leg);
+  });
+
+  // Purple aura
+  stalkerLight = new THREE.PointLight(0x6600aa, 1.2, 7);
+  stalkerLight.position.y = 2;
+  g.add(stalkerLight);
+
+  g.position.set(6, 0, 10); // starts to the right of the player
+  scene.add(g);
+  return g;
 }
 
 // -------------------- ROOM THREE (FINAL) --------------------
@@ -685,8 +876,12 @@ rooms.push(roomOne, roomTwo, roomThree);
 roomOne();
 
 // -------------------- ANIMATE --------------------
+const clock = new THREE.Clock();
+
 function animate() {
   requestAnimationFrame(animate);
+  const delta   = clock.getDelta();
+  const elapsed = clock.getElapsedTime();
 
   if (!gameWon) {
     const dir = new THREE.Vector3();
@@ -710,11 +905,90 @@ function animate() {
       mesh.material.transparent = true;
       mesh.material.opacity = Math.max(0, (mesh.material.opacity ?? 1) - 0.02);
     }
+    if (mesh.userData.flashing) {
+      mesh.userData.flashTimer = (mesh.userData.flashTimer || 0) + delta * 10;
+      const flash = Math.sin(mesh.userData.flashTimer) > 0;
+      if (mesh.material?.color) mesh.material.color.set(flash ? 0xffff00 : 0xff0000);
+      if (mesh.userData.flashTimer > Math.PI * 2) {
+        mesh.userData.flashing = false;
+        mesh.userData.flashTimer = 0;
+        if (mesh.material?.color) mesh.material.color.set(0xff0000);
+      }
+    }
   });
+
+  // Animate floating wisps in room two
+  if (roomIndex === 1) {
+    scene.children.forEach(obj => {
+      if (obj.isPointLight && obj.userData.phase !== undefined) {
+        const d = obj.userData;
+        obj.position.y = d.baseY + Math.sin(elapsed * d.speed + d.phase) * 0.5;
+        obj.position.x = d.baseX + Math.cos(elapsed * d.speed * 0.6 + d.phase) * 0.35;
+      }
+    });
+  }
+
+  // Stalker AI
+  if (stalkerActive && stalker && roomIndex === 1) {
+    const sp   = new THREE.Vector3(stalker.position.x, 0, stalker.position.z);
+    const cp   = new THREE.Vector3(camera.position.x,  0, camera.position.z);
+    const dist = sp.distanceTo(cp);
+
+    // Move toward player
+    const toPlayer = cp.clone().sub(sp).normalize();
+    stalker.position.x += toPlayer.x * stalkerSpeed;
+    stalker.position.z += toPlayer.z * stalkerSpeed;
+
+    // Face player
+    stalker.lookAt(camera.position.x, stalker.position.y, camera.position.z);
+
+    // Subtle bob
+    stalker.position.y = Math.sin(elapsed * 5) * 0.05;
+
+    // Slowly accelerate over time
+    stalkerSpeed = Math.min(0.032, stalkerSpeed + delta * 0.00035);
+
+    const proximity = Math.max(0, 1 - dist / 18);
+
+    // First warning message
+    if (dist < 14 && !stalkerWarned) {
+      stalkerWarned = true;
+      _stalkerMsgEl.textContent = 'something is following you';
+      _stalkerMsgEl.style.opacity = '1';
+      setTimeout(() => { _stalkerMsgEl.style.opacity = '0'; }, 3500);
+    }
+
+    // Red heartbeat vignette pulsing with proximity
+    if (dist < 14) {
+      heartbeatTime += delta * (2.5 + proximity * 9);
+      const pulse = Math.max(0, Math.sin(heartbeatTime) * proximity * 0.75);
+      _heartbeatEl.style.opacity = pulse.toFixed(3);
+    } else {
+      _heartbeatEl.style.opacity = '0';
+    }
+
+    // Stalker aura flicker
+    if (stalkerLight) {
+      stalkerLight.intensity = 0.9 + Math.sin(elapsed * 14) * 0.35 * Math.max(0.2, proximity);
+      stalkerLight.color.setHSL(0.78, 1, 0.25 + proximity * 0.22);
+    }
+
+    // Caught — reset player position
+    if (dist < 1.2) {
+      camera.position.set(0, 1.6, 12);
+      stalker.position.set((Math.random() - 0.5) * 4, 0, 20);
+      stalkerSpeed = 0.012;
+      _heartbeatEl.style.opacity = '0';
+      _stalkerMsgEl.textContent = 'it found you';
+      _stalkerMsgEl.style.opacity = '1';
+      setTimeout(() => { _stalkerMsgEl.style.opacity = '0'; }, 3000);
+    }
+  } else if (roomIndex !== 1) {
+    _heartbeatEl.style.opacity = '0';
+  }
 
   renderer.render(scene, camera);
 }
-const clock = new THREE.Clock();
 
 animate();
 
